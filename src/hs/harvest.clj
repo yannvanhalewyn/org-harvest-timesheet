@@ -10,10 +10,20 @@
 (defn- parse-date [d]
   (f/parse (f/formatter :date-time-no-ms) d))
 
-(defn- clean-string [s]
-  (str/lower-case (str/replace s #"[^a-zA-Z0-9]" "")))
+(defn- project-search-name [p]
+  (-> (str (:client/name p) (:project/name p))
+      (str/replace #"\W" "")
+      str/lower-case))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn- project-matcher
+  "Returns a predicate function testing wether or not the project name
+  and client match the query. A '-' will serve as regex
+  wildcard. foo-bar => foo.*bar"
+  [q]
+  (let [re (re-pattern (str/join ".*" (str/split q #"-")))]
+    #(re-find re (project-search-name %))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsers
 
 (defn- parse-projects [records]
@@ -25,9 +35,6 @@
      :project/updated-at (parse-date (:updated_at record))
      :client/id (:id client)
      :client/name (:name client)}))
-
-(defn- project-search-name [p]
-  (clean-string (str (:client/name p) (:project/name p))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Client
@@ -75,9 +82,7 @@
   name and task name. Will throw when none found, pick the most recent
   one if multiple are found."
   [client q]
-  (let [candidates (filter
-                    #(str/includes? (project-search-name %) (clean-string q))
-                    (get-projects client))
+  (let [candidates (filter (project-matcher q) (get-projects client))
         pick (last (sort-by :project/updated-at candidates))]
     (when (empty? candidates)
       (throw (ex-info "Could not find project" {:name q})))
