@@ -8,7 +8,7 @@
   "Reads the org file, extracts the time entries and pushes them to
   harvest"
   [org-filename]
-  (harvest/post-time-entries!
+  (harvest/sync!
    (harvest/make-client)
    (timesheet/parse (org/->json org-filename))))
 

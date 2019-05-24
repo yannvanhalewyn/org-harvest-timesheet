@@ -28,11 +28,11 @@
   (info (colorize :yellow "[Harvest]") msg))
 
 (defn- log-entry [entry]
-  (info (format "\t%s %s %s"
-                (colorize :grey (date-readable (:entry/spent-at entry)))
-                (colorize :cyan (format "[%s %s]" (:client/name entry)
-                                        (:project/name entry)))
-                (:entry/title entry))))
+  (format "%s %s %s"
+          (colorize :grey (date-readable (:entry/spent-at entry)))
+          (colorize :cyan (format "[%s %s]" (:client/name entry)
+                                  (:project/name entry)))
+          (:entry/title entry)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsers
@@ -152,20 +152,6 @@
                    re (:client/name pick) (:project/name pick))))
     pick))
 
-(defn- delete-entries?
-  "Will ask the user to delete these entries. Will throw if any entry
-  is locked."
-  [client entries]
-  (when (some :entry/locked? entries)
-    (throw (ex-info "Locked entries detected in given time range."
-                    {:type :harvest/cancelled})))
-  (doseq [e entries] (log-entry e))
-  (if (confirm! "Would you like to delete those entries?")
-    (doseq [{:entry/keys [id]} entries]
-      (request client {:path (str "/time_entries/" id) :method :delete}))
-    (throw (ex-info "Won't delete conflicting entries"
-                    {:type :harvest/cancelled}))))
-
 (defn- post-time-entry*
   "Posts the time entry to Harvest. Will try to find a task for the
   given project. Throws if no task is found"
@@ -194,35 +180,48 @@
      ::account-id (or account-id (parse-int (System/getenv "HARVEST_ACCOUNT_ID")))
      ::data-dir (home-dir ".harvest_sync")}))
 
-(defn post-time-entries!
-  "Will push all entries to Harvest. Will check if existing entries
-  exist in that timerange. If so, will ask to delete those before
-  pushing."
+(defn sync!
+  "Will fetch all existing entries for the time range of the local
+  entries, compare them, print out a diff for the user and then apply
+  the sync (delete missing locally, pushing missing remotely) "
   [client entries]
   (when (empty? entries)
     (throw (ex-info "No entries to push." {})))
   (let [projects (get-projects client)
-        dates (map :entry/spent-at entries)
         entries (for [entry entries
                       :let [project (find-project projects (project-re entry))
                             task (first (get-project-tasks client (:project/id project)))]]
                   (merge entry project task))
+        dates (map :entry/spent-at entries)
         existing-entries (get-entries client {:from (apply t/min-date dates)
                                               :to (apply t/max-date dates)})
         {:keys [to-push to-delete]} (compare-entries entries existing-entries)]
 
-    (when-let [entry (first (remove :task/id entries))]
+    (when-let [entry (first (remove :task/id to-push))]
       (throw (ex-info "Could not find default task for project" {:entry entry})))
 
+    (when (some :entry/locked? to-delete)
+      (throw (ex-info "Locked entries detected in given time range."
+                      {:type :harvest/cancelled})))
+
     (when (seq to-delete)
-      (log "Entries were found in Harvest but not in time sheet:")
-      (delete-entries? client to-delete))
+      (info (str "\nThese entries will be " (colorize :red "DELETED")))
+      (doseq [e to-delete] (info (str "\t" (log-entry e)))))
 
-    ;; Push entries
-    (if (seq to-push)
-      (log (format "Syncing %s entries:" (count to-push)))
-      (log "No local entries found that need to be pushed."))
+    (when (seq to-push)
+      (info (str "\nThese entries will be " (colorize :green "ADDED")))
+      (doseq [e to-push] (info (str "\t" (log-entry e)))))
 
-    (doseq [entry to-push]
-      (log-entry entry)
-      (post-time-entry* client entry))))
+    (if (every? empty? [to-push to-delete])
+      (log "Nothing to be done.")
+      (do (when-not (confirm! "\nApply?")
+            (throw (ex-info "User cancelled operation"
+                            {:type :harvest/cancelled})))
+
+          (doseq [{:entry/keys [id] :as entry} to-delete]
+            (info (str (colorize :red "\tDELETE ") (log-entry entry)))
+            (request client {:path (str "/time_entries/" id) :method :delete}))
+
+          (doseq [entry to-push]
+            (info (str (colorize :green "\tPUSH   ") (log-entry entry)))
+            (post-time-entry* client entry))))))
