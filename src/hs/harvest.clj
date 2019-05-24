@@ -1,12 +1,11 @@
 (ns hs.harvest
   (:require [clj-http.client :as http]
-            [clj-time.core :refer [weeks]]
+            [clj-time.core :as t :refer [weeks]]
             [clj-time.format :as f]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [hs.file :as file]
-            [hs.utils :refer [with-file-cache parse-int confirm!]]
-            [clj-time.core :as t]))
+            [hs.utils :refer [confirm! parse-int with-file-cache]]))
 
 (defn- parse-date [d]
   (f/parse (f/formatter :date-time-no-ms) d))
@@ -62,26 +61,63 @@
 (def ^:private BASE_URL "https://api.harvestapp.com/api/v2")
 
 (defn- request [{::keys [access-token account-id]} {:keys [method path params query-params]}]
-  (http/request
-   {:url (str BASE_URL path)
-    :method (or method :get)
-    :headers {"Harvest-account-id" account-id
-              "Authorization" (str "Bearer " access-token)}
-    :form-params params
-    :query-params query-params
-    :as :json}))
+  (:body
+   (http/request
+    {:url (str BASE_URL path)
+     :method (or method :get)
+     :headers {"Harvest-account-id" account-id
+               "Authorization" (str "Bearer " access-token)}
+     :form-params params
+     :query-params query-params
+     :as :json})))
+
+(defn- get-projects
+  "Fetches the active projects from harvest. Caches the harvest
+  response for one day."
+  [{::keys [data-dir] :as client}]
+  (parse-projects
+   (:projects
+    (with-file-cache {:ttl (weeks 1)
+                      :file (io/file data-dir "cache/projects.edn")}
+      (log "Fetching projects")
+      (request client {:path "/projects.json"
+                       :query-params {:is_active true}})))))
+
+(defn- get-project-tasks
+  [{::keys [data-dir] :as client} project-id]
+  (parse-tasks
+   (:task_assignments
+    (let [cache-key (format "cache/project_%s_tasks.edn" project-id)
+          path (str "/projects/" project-id "/task_assignments")]
+      (with-file-cache {:ttl (weeks 1) :file (io/file data-dir cache-key)}
+        (request client {:path path
+                         :query-params {:is_active true}}))))))
 
 (defn- get-entries [client {:keys [from to]}]
   (assert (t/before? from to))
   (log (format "Fetching existing entries between %s and %s"
                (date-readable from) (date-readable to)))
-  (let [user (:body (request client {:path "/users/me"}))]
+  (let [user (request client {:path "/users/me"})]
     (assert (:id user))
     (-> (request client {:path "/time_entries"
                          :query-params {:from (timestamp from)
                                         :user_id (:id user)
                                         :to (timestamp to)}})
-        :body :time_entries parse-entries)))
+        :time_entries parse-entries)))
+
+(defn- find-project
+  "Fetches the projects and attempts to find a match in the client
+  name and task name. Will throw when none found, pick the most recent
+  one if multiple are found."
+  [projects re]
+  (let [candidates (filter (comp (partial re-find re) project-search-name) projects)
+        pick (last (sort-by :project/updated-at candidates))]
+    (when (empty? candidates)
+      (throw (ex-info "Could not find project" {:name re})))
+    (when (> (count candidates) 1)
+      (log (format "Multiple projects found for: '%s'. Picked: [%s] %s"
+                   re (:client/name pick) (:project/name pick))))
+    pick))
 
 (defn- delete-existing-entries?
   "Checks for any existing entries in the time range. If any are
@@ -104,53 +140,6 @@
         (request client {:path (str "/time_entries/" id) :method :delete}))
       (throw (ex-info "Won't delete conflicting entries"
                       {:type :harvest/cancelled})))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Public
-
-(defn make-client
-  "Reads the access-token and account-id from the env"
-  [& [{:keys [access-token account-id]}]]
-  {::access-token (or access-token (System/getenv "HARVEST_ACCESS_TOKEN"))
-   ::account-id (or account-id (parse-int (System/getenv "HARVEST_ACCOUNT_ID")))
-   ::data-dir (file/home ".harvest_sync")})
-
-(defn- get-projects
-  "Fetches the active projects from harvest. Caches the harvest
-  response for one day."
-  [{::keys [data-dir] :as client}]
-  (parse-projects
-   (:projects
-    (with-file-cache {:ttl (weeks 1)
-                      :file (io/file data-dir "cache/projects.edn")}
-
-      (log "Fetching projects")
-      (:body (request client {:path "/projects.json"
-                              :query-params {:is_active true}}))))))
-
-(defn- get-project-tasks
-  [{::keys [data-dir] :as client} project-id]
-  (parse-tasks
-   (:task_assignments
-    (let [cache-key (format "cache/project_%s_tasks.edn" project-id)
-          path (str "/projects/" project-id "/task_assignments")]
-      (with-file-cache {:ttl (weeks 1) :file (io/file data-dir cache-key)}
-        (:body (request client {:path path
-                                :query-params {:is_active true}})))))))
-
-(defn- find-project
-  "Fetches the projects and attempts to find a match in the client
-  name and task name. Will throw when none found, pick the most recent
-  one if multiple are found."
-  [projects re]
-  (let [candidates (filter (comp (partial re-find re) project-search-name) projects)
-        pick (last (sort-by :project/updated-at candidates))]
-    (when (empty? candidates)
-      (throw (ex-info "Could not find project" {:name re})))
-    (when (> (count candidates) 1)
-      (log (format "Multiple projects found for: '%s'. Picked: [%s] %s"
-                   re (:client/name pick) (:project/name pick))))
-    pick))
 
 (defn- post-time-entry*
   "Posts the time entry to Harvest. Will try to find a task for the
@@ -175,6 +164,15 @@
                :hours (:entry/hours entry)
                :notes (:entry/title entry)}})))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Public
+
+(defn make-client
+  "Reads the access-token and account-id from the env"
+  [& [{:keys [access-token account-id]}]]
+  {::access-token (or access-token (System/getenv "HARVEST_ACCESS_TOKEN"))
+   ::account-id (or account-id (parse-int (System/getenv "HARVEST_ACCOUNT_ID")))
+   ::data-dir (file/home ".harvest_sync")})
 
 (defn post-time-entries!
   "Will push all entries to Harvest. Will check if existing entries
