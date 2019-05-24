@@ -30,10 +30,10 @@
 
 (defn parse-entry-value
   "Parses the raw text of an entry value like:
-     11u - 11u30: Something"
+     11:00 - 11:30 Something => [0.5 \"Something\"]"
   [s]
   (if-let [[_ h1 m1 h2 m2 text]
-           (re-find #"(\d{2})u(?:(\d{2}))? - (\d{2})u(?:(\d{2}))?:(.*)" s)]
+           (re-find #"(\d{2})(?::(\d{2}))? - (\d{2})(?::(\d{2}))?(.*)" s)]
     [(double (- (+ (parse-int h2) (if m2 (/ (parse-int m2) 60) 0))
                 (+ (parse-int h1) (if m1 (/ (parse-int m1) 60) 0))))
      (str/trim text)]
