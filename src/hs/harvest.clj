@@ -1,13 +1,17 @@
 (ns hs.harvest
   (:require [clj-http.client :as http]
-            [clj-time.format :as f]
             [clj-time.core :refer [days]]
+            [clj-time.format :as f]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [hs.file :as file]
             [hs.utils :refer [with-file-cache]]))
 
-(def parse-date (partial f/parse (f/formatter :date-time-no-ms)))
+(defn- parse-date [d]
+  (f/parse (f/formatter :date-time-no-ms) d))
+
+(defn- clean-string [s]
+  (str/lower-case (str/replace s #"[^a-zA-Z0-9]" "")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsers
@@ -22,7 +26,10 @@
      :client/id (:id client)
      :client/name (:name client)}))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn- project-search-name [p]
+  (clean-string (str (:client/name p) (:project/name p))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Client
 
 (def ^:private BASE_URL "https://api.harvestapp.com/api/v2")
@@ -53,9 +60,28 @@
    ::account-id (System/getenv "HARVEST_ACCOUNT_ID")
    ::data-dir (file/home ".harvest_sync")})
 
-(defn get-projects [{::keys [data-dir] :as client}]
+(defn get-projects
+  "Fetches the active projects from harvest. Caches the harvest
+  response for one day."
+  [{::keys [data-dir] :as client}]
   (parse-projects
    (:projects
     (with-file-cache {:ttl (days 1)
                       :file (io/file data-dir "cache/projects.edn")}
       (:body (get-projects* client))))))
+
+(defn find-project!
+  "Fetches the projects and attempts to find a match in the client
+  name and task name. Will throw when none found, pick the most recent
+  one if multiple are found."
+  [client q]
+  (let [candidates (filter
+                    #(str/includes? (project-search-name %) (clean-string q))
+                    (get-projects client))
+        pick (last (sort-by :project/updated-at candidates))]
+    (when (empty? candidates)
+      (throw (ex-info "Could not find project" {:name q})))
+    (when (> (count candidates) 1)
+      (println (format "Multiple projects found for: '%s'. Picked: [%s] %s"
+                       q (:client/name pick) (:project/name pick))))
+    pick))
