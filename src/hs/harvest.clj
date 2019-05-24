@@ -1,14 +1,18 @@
 (ns hs.harvest
   (:require [clj-http.client :as http]
-            [clj-time.core :refer [days]]
+            [clj-time.core :refer [weeks]]
             [clj-time.format :as f]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [hs.file :as file]
-            [hs.utils :refer [with-file-cache]]))
+            [hs.utils :refer [with-file-cache]]
+            [clj-time.core :as t]))
 
 (defn- parse-date [d]
   (f/parse (f/formatter :date-time-no-ms) d))
+
+(defn- timestamp [d]
+  (f/unparse (f/formatter :date-time-no-ms) d))
 
 (defn- project-search-name [p]
   (-> (str (:client/name p) (:project/name p))
@@ -36,6 +40,11 @@
      :client/id (:id client)
      :client/name (:name client)}))
 
+(defn- parse-tasks [records]
+  (for [{:keys [task]} records]
+    {:task/id (:id task)
+     :task/name (:name task)}))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Client
 
@@ -44,17 +53,16 @@
 (defn- request [{::keys [api-token account-id]} {:keys [method path params query-params]}]
   (http/request
    {:url (str BASE_URL path)
-    :method (or method :post)
+    :method (or method :get)
     :headers {"Harvest-account-id" account-id
               "Authorization" (str "Bearer " api-token)}
-    :params params
+    :form-params params
     :query-params query-params
     :as :json}))
 
 (defn- get-projects* [client]
   (println "Fetching harvest projects")
   (request client {:path "/projects.json"
-                   :method :get
                    :query-params {:is_active true}}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -73,9 +81,19 @@
   [{::keys [data-dir] :as client}]
   (parse-projects
    (:projects
-    (with-file-cache {:ttl (days 1)
+    (with-file-cache {:ttl (weeks 1)
                       :file (io/file data-dir "cache/projects.edn")}
       (:body (get-projects* client))))))
+
+(defn get-project-tasks
+  [{::keys [data-dir] :as client} project-id]
+  (parse-tasks
+   (:task_assignments
+    (let [cache-key (format "cache/project_%s_tasks.edn" project-id)
+          path (str "/projects/" project-id "/task_assignments")]
+      (with-file-cache {:ttl (weeks 1) :file (io/file data-dir cache-key)}
+        (:body (request client {:path path
+                                :query-params {:is_active true}})))))))
 
 (defn find-project!
   "Fetches the projects and attempts to find a match in the client
@@ -90,3 +108,21 @@
       (println (format "Multiple projects found for: '%s'. Picked: [%s] %s"
                        q (:client/name pick) (:project/name pick))))
     pick))
+
+(defn post-time-entry!
+  "Posts the time entry to Harvest. Will try to find a task for the
+  given project. Throws if no task is found"
+  [client project-id entry]
+  (if-let [task (first (get-project-tasks client project-id))]
+    (request
+     client
+     {:path "/time_entries"
+      :method :post
+      :params {:project_id project-id
+               :task_id (:task/id task)
+               :spent_date (timestamp (:entry/spent-at entry))
+               :hours (:entry/hours entry)
+               :notes (:entry/name entry)}})
+    (throw (ex-info "Could not find default task for project"
+                    {:project-id project-id
+                     :entry entry}))))
