@@ -1,37 +1,64 @@
 (ns hs.timesheet
   (:require [clojure.spec.alpha :as s]
             [clojure.string :as str]
-            [hs.utils :refer [keywordize parse-int assert-spec! assert-spec+!]]))
+            [hs.utils :refer [keywordize parse-int assert-spec! assert-spec+!]]
+            [clj-time.core :as t]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Specs
 
 (s/def :node/type keyword?)
-(s/def :node/value (s/nilable string?))
+(s/def :node/title (s/nilable string?))
 (s/def :node/tags (s/nilable (s/coll-of string?)))
 (s/def :node/children (s/coll-of :node/model))
 (s/def :node/model
-  (s/keys :req [:node/type :node/value :node/tags :node/children]))
+  (s/keys :req [:node/type :node/title :node/tags :node/children]))
 
 (s/def :entry/hours pos?)
 (s/def :entry/name string?)
 (s/def :entry/project-handle (s/nilable string?))
+(s/def :entry/spent-at (partial instance? org.joda.time.DateTime))
 (s/def :entry/model
-  (s/keys :req [:entry/hours :entry/name :entry/project-handle]))
+  (s/keys :req [:entry/hours
+                :entry/name
+                :entry/project-handle
+                :entry/spent-at]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsing org timesheet
+
+(def MONTHS ["jan" "feb" "mar" "apr" "may" "jun" "jul" "aug" "sept" "oct" "nov" "dec"])
+(def WEEKDAYS ["monday" "tuesday" "wednesday" "thursday" "friday" "saturday" "sunday"])
+
+(defn- index-of [coll x]
+  (let [i (.indexOf coll (str/lower-case x))]
+    (when (= -1 i)
+      (throw (ex-info "Couldn't find element in coll"
+                      {:coll coll :element x})))
+    i))
 
 (defn- parse-org-node
   "Given the raw json from and org file, recursively parse it into a
   clojure tree"
   [[type props & children]]
   {:node/type (keywordize type)
-   :node/value (:raw-value props)
+   :node/title (:raw-value props)
    :node/tags (:tags props)
    :node/children (map parse-org-node children)})
 
-(defn- parse-entry-value
+(defn parse-weekday
+  "Figures which date it should be in a given week using the
+  conventions of our timesheet.
+   Ex: \"20 may\" \"tuesday\" => #inst \"2019-05-21\" "
+  [week-str weekday-str]
+  (let [[d m] (str/split week-str #" ")
+        year (t/year (t/now))
+        month (inc (index-of MONTHS m))
+        day (+ (parse-int d)
+               (index-of WEEKDAYS weekday-str))]
+    (t/date-time year month day)))
+
+(defn parse-entry-title
   "Parses the raw text of an entry value like:
      11:00 - 11:30 Something => [0.5 \"Something\"]"
   [s]
@@ -42,18 +69,27 @@
      (str/trim text)]
     (throw (ex-info "Could not parse time entry" {:value s}))))
 
-(defn- parse-entry [{:node/keys [value tags]}]
-  (let [[hours name] (parse-entry-value value)]
-    {:entry/hours hours
-     :entry/name name
-     :entry/project-handle (first tags)
-     :entry/_raw value}))
+(defn- time-entries
+  "Given a week node, parse the entries duration, title and timestamp"
+  [week]
+  (flatten
+   (for [day (:node/children week)]
+     (for [entry (:node/children day)
+           :let [time (parse-weekday (:node/title week) (:node/title day))
+                 [hours name] (parse-entry-title (:node/title entry))]]
+       {:entry/hours hours
+        :entry/name name
+        :entry/project-handle (first (:node/tags entry))
+        :entry/spent-at time
+        :entry/_raw (format "%s | %s | %s"
+                            (:node/title week)
+                            (:node/title day)
+                            (:node/title entry))}))))
 
 (defn parse-week [data]
   (let [root (assert-spec! :node/model (parse-org-node data))
-        weeks (:node/children root)
-        entries (mapcat :node/children (mapcat :node/children weeks))]
-    (assert-spec+! :entry/model (map parse-entry entries))))
+        weeks (:node/children root)]
+    (assert-spec+! :entry/model (mapcat time-entries weeks))))
 
 (comment
   (parse-week (hs.utils/read-json "timesheet.json"))
