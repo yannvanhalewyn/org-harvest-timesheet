@@ -65,6 +65,23 @@
      :client/id (:id client)}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Comparing local <> remote entries
+
+(def ^:private comparable
+  (juxt :entry/title :project/id :client/id :entry/spent-at
+        :entry/hours))
+
+(defn- compare-entries
+  "Will compare a local set and remote set of entries. Will return the
+  ones missing remotely, and the ones that are present remotely but
+  not locally"
+  [local-entries remote-entries]
+  (let [local? (set (map comparable local-entries))
+        remote? (set (map comparable remote-entries))]
+    {:to-push (remove (comp remote? comparable) local-entries)
+     :to-delete (remove (comp local? comparable) remote-entries)}))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Client
 
 (def ^:private BASE_URL "https://api.harvestapp.com/api/v2")
@@ -135,24 +152,19 @@
                    re (:client/name pick) (:project/name pick))))
     pick))
 
-(defn- delete-existing-entries?
-  "Checks for any existing entries in the time range. If any are
-  found, will:
-    - Print them out
-    - Throw if any of them are locked
-    - Ask to delete them otherwise, throw if cancelled by user."
-  [client {:keys [from to] :as args}]
-  (when-let [entries (seq (get-entries client args))]
-    (when (some :entry/locked? entries)
-      (throw (ex-info "Locked entries detected in given time range."
-                      {:type :harvest/cancelled})))
-    (log "Existing entries have been found for that time range:")
-    (doseq [e entries] (log-entry e))
-    (if (confirm! "Would you like to delete those entries?")
-      (doseq [{:entry/keys [id]} entries]
-        (request client {:path (str "/time_entries/" id) :method :delete}))
-      (throw (ex-info "Won't delete conflicting entries"
-                      {:type :harvest/cancelled})))))
+(defn- delete-entries?
+  "Will ask the user to delete these entries. Will throw if any entry
+  is locked."
+  [client entries]
+  (when (some :entry/locked? entries)
+    (throw (ex-info "Locked entries detected in given time range."
+                    {:type :harvest/cancelled})))
+  (doseq [e entries] (log-entry e))
+  (if (confirm! "Would you like to delete those entries?")
+    (doseq [{:entry/keys [id]} entries]
+      (request client {:path (str "/time_entries/" id) :method :delete}))
+    (throw (ex-info "Won't delete conflicting entries"
+                    {:type :harvest/cancelled}))))
 
 (defn- post-time-entry*
   "Posts the time entry to Harvest. Will try to find a task for the
@@ -194,17 +206,23 @@
         entries (for [entry entries
                       :let [project (find-project projects (project-re entry))
                             task (first (get-project-tasks client (:project/id project)))]]
-                  (merge entry project task))]
+                  (merge entry project task))
+        existing-entries (get-entries client {:from (apply t/min-date dates)
+                                              :to (apply t/max-date dates)})
+        {:keys [to-push to-delete]} (compare-entries entries existing-entries)]
 
     (when-let [entry (first (remove :task/id entries))]
       (throw (ex-info "Could not find default task for project" {:entry entry})))
 
-    ;; Check for existing entries
-    (delete-existing-entries? client {:from (apply t/min-date dates)
-                                      :to (apply t/max-date dates)})
+    (when (seq to-delete)
+      (log "Entries were found in Harvest but not in time sheet:")
+      (delete-entries? client to-delete))
 
     ;; Push entries
-    (log (format "Syncing %s entries:" (count entries)))
-    (doseq [entry entries]
+    (if (seq to-push)
+      (log (format "Syncing %s entries:" (count to-push)))
+      (log "No local entries found that need to be pushed."))
+
+    (doseq [entry to-push]
       (log-entry entry)
       (post-time-entry* client entry))))
