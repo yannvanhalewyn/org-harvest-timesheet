@@ -4,6 +4,8 @@
             [hs.utils :refer [keywordize parse-int assert-spec! assert-spec+!]]
             [clj-time.core :as t]))
 
+(def DEFAULT_PROJECT_HANDLES ["brightmotive" "product"])
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Specs
 
@@ -15,13 +17,13 @@
   (s/keys :req [:node/type :node/title :node/tags :node/children]))
 
 (s/def :entry/hours pos?)
-(s/def :entry/name string?)
-(s/def :entry/project-handle (s/nilable string?))
+(s/def :entry/title string?)
+(s/def :entry/project-handles (s/+ string?))
 (s/def :entry/spent-at (partial instance? org.joda.time.DateTime))
 (s/def :entry/model
   (s/keys :req [:entry/hours
-                :entry/name
-                :entry/project-handle
+                :entry/title
+                :entry/project-handles
                 :entry/spent-at]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -76,10 +78,10 @@
    (for [day (:node/children week)]
      (for [entry (:node/children day)
            :let [time (parse-weekday (:node/title week) (:node/title day))
-                 [hours name] (parse-entry-title (:node/title entry))]]
+                 [hours title] (parse-entry-title (:node/title entry))]]
        {:entry/hours hours
-        :entry/name name
-        :entry/project-handle (first (:node/tags entry))
+        :entry/title title
+        :entry/project-handles (or (:node/tags entry) DEFAULT_PROJECT_HANDLES)
         :entry/spent-at time
         :entry/_raw (format "%s | %s | %s"
                             (:node/title week)
@@ -98,6 +100,6 @@
        (assert-spec+! :entry/model)))
 
 (comment
-  (parse-week (hs.utils/read-json "timesheet.json"))
+  (parse (hs.org/->json "/Users/yannvanhalewyn/Google Drive/Documents/timesheet.org"))
 
   )

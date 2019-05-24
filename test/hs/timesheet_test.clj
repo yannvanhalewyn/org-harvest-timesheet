@@ -18,23 +18,23 @@
 
 (deftest parse
   (is (= [#:entry{:hours 0.25,
-                  :project-handle "projectA",
+                  :project-handles ["brightmotive" "product"]
                   :_raw "20 May | Monday | 11:15 - 11:30 Standup",
                   :spent-at (t/date-time 2019 05 20)
-                  :name "Standup"}
+                  :title "Standup"}
           #:entry{:hours 0.25,
-                  :project-handle "projectA",
+                  :project-handles ["projectA"],
                   :_raw "20 May | Monday | 11:30 - 11:45 Review",
                   :spent-at (t/date-time 2019 05 20)
-                  :name "Review"}
+                  :title "Review"}
           #:entry{:hours 1.0,
-                  :project-handle "projectA",
+                  :project-handles ["projectA"],
                   :_raw "20 May | Tuesday | 16:00 - 17:00 Emails",
                   :spent-at (t/date-time 2019 05 21)
-                  :name "Emails"}
+                  :title "Emails"}
           #:entry{:hours 2.5,
-                  :project-handle "projectB",
+                  :project-handles ["custA" "projectB"],
                   :_raw "20 May | Tuesday | 17:00 - 19:30 Programming",
                   :spent-at (t/date-time 2019 05 21)
-                  :name "Programming"}]
+                  :title "Programming"}]
          (sut/parse (org/->json "resources/example_timesheet.org")))))
