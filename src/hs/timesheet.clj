@@ -86,10 +86,16 @@
                             (:node/title day)
                             (:node/title entry))}))))
 
-(defn parse-week [data]
-  (let [root (assert-spec! :node/model (parse-org-node data))
-        weeks (:node/children root)]
-    (assert-spec+! :entry/model (mapcat time-entries weeks))))
+(defn parse
+  "Given a json datastructure which comes from serializing the org
+  file, parse and return a list of entries ready to be pushed to the
+  time tracker."
+  [data]
+  (->> (parse-org-node data)
+       (assert-spec! :node/model)
+       (:node/children)
+       (mapcat time-entries)
+       (assert-spec+! :entry/model)))
 
 (comment
   (parse-week (hs.utils/read-json "timesheet.json"))

@@ -1,7 +1,8 @@
 (ns hs.timesheet-test
-  (:require [hs.timesheet :as sut]
-            [clojure.test :refer [deftest is are]]
-            [clj-time.core :as t]))
+  (:require [clj-time.core :as t]
+            [clojure.test :refer [are deftest is]]
+            [hs.timesheet :as sut]
+            [hs.utils :refer [read-json]]))
 
 (deftest parse-entry-title
   (are [in out] (= out (sut/parse-entry-title in))
@@ -14,3 +15,26 @@
     "20 May" "Monday" 5 20
     "20 May" "Tuesday" 5 21
     "1 jul" "thursday" 7 4))
+
+(deftest parse
+  (is (= [#:entry{:hours 0.25,
+                  :project-handle "projectA",
+                  :_raw "20 May | Monday | 11:15 - 11:30 Standup",
+                  :spent-at (t/date-time 2019 05 20)
+                  :name "Standup"}
+          #:entry{:hours 0.25,
+                  :project-handle "projectA",
+                  :_raw "20 May | Monday | 11:30 - 11:45 Review",
+                  :spent-at (t/date-time 2019 05 20)
+                  :name "Review"}
+          #:entry{:hours 1.0,
+                  :project-handle "projectA",
+                  :_raw "20 May | Tuesday | 16:00 - 17:00 Emails",
+                  :spent-at (t/date-time 2019 05 21)
+                  :name "Emails"}
+          #:entry{:hours 2.5,
+                  :project-handle "projectB",
+                  :_raw "20 May | Tuesday | 17:00 - 19:30 Programming",
+                  :spent-at (t/date-time 2019 05 21)
+                  :name "Programming"}]
+         (sut/parse (read-json "resources/example_timesheet.json")))))
