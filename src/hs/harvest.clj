@@ -4,9 +4,8 @@
             [clj-time.format :as f]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [hs.log :as log]
-            [hs.file :as file]
-            [hs.utils :refer [confirm! parse-int with-file-cache]]))
+            [hs.utils :refer [confirm! parse-int with-file-cache home-dir
+                              info colorize]]))
 
 (defn- parse-date [d]
   (f/parse (f/formatter :date-time-no-ms) d))
@@ -26,13 +25,13 @@
       str/lower-case))
 
 (defn- log [msg]
-  (log/info (log/color :yellow "[Harvest]") msg))
+  (info (colorize :yellow "[Harvest]") msg))
 
 (defn- log-entry [entry]
-  (log/info (format "\t%s %s %s"
-                    (log/color :grey (date-readable (:entry/spent-at entry)))
-                    (log/color :cyan (format  "[%s %s]" (:client/name entry)
-                                              (:project/name entry)))
+  (info (format "\t%s %s %s"
+                    (colorize :grey (date-readable (:entry/spent-at entry)))
+                    (colorize :cyan (format "[%s %s]" (:client/name entry)
+                                            (:project/name entry)))
                     (:entry/title entry))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -179,7 +178,7 @@
       (throw (ex-info "No harvest access token or account-id supplied" {})))
     {::access-token (or access-token (System/getenv "HARVEST_ACCESS_TOKEN"))
      ::account-id (or account-id (parse-int (System/getenv "HARVEST_ACCOUNT_ID")))
-     ::data-dir (file/home ".harvest_sync")}))
+     ::data-dir (home-dir ".harvest_sync")}))
 
 (defn post-time-entries!
   "Will push all entries to Harvest. Will check if existing entries

@@ -15,7 +15,7 @@ The file is separated into weeks, then into weekdays, then tasks. Each task uses
 
 ## Usage
 
-In order to use this tool, run it will:
+In order to use this tool, run it with:
 
 ``` shell
 clj -m hs.core sync <path/to/timesheet>

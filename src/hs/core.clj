@@ -1,7 +1,7 @@
 (ns hs.core
   (:require [hs.harvest :as harvest]
-            [hs.log :as log]
             [hs.org :as org]
+            [hs.utils :refer [error]]
             [hs.timesheet :as timesheet]))
 
 (defn sync!
@@ -18,6 +18,6 @@
       "sync" (sync! arg1)
       (println "Usage:   harvest sync [filename]"))
     (catch Exception e
-      (log/error (.getMessage e) (ex-data e))
+      (error (.getMessage e) (ex-data e))
       (System/exit -1)))
   (System/exit 0))
