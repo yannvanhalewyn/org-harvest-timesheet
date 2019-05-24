@@ -69,16 +69,23 @@
 
 (def ^:private BASE_URL "https://api.harvestapp.com/api/v2")
 
-(defn- request [{::keys [access-token account-id]} {:keys [method path params query-params]}]
-  (:body
-   (http/request
-    {:url (str BASE_URL path)
-     :method (or method :get)
-     :headers {"Harvest-account-id" account-id
-               "Authorization" (str "Bearer " access-token)}
-     :form-params params
-     :query-params query-params
-     :as :json})))
+(defn- request* [{::keys [access-token account-id]}
+                 {:keys [method path params query-params]}]
+  (http/request
+   {:url (str BASE_URL path)
+    :method (or method :get)
+    :headers {"Harvest-account-id" account-id
+              "Authorization" (str "Bearer " access-token)}
+    :form-params params
+    :query-params query-params
+    :as :json}))
+
+(defn- request [client params]
+  (let [{:keys [body]} (request* client params)]
+    (if (and (:total_pages body) (> (:total_pages body) 1))
+      (throw (ex-info "Harvest responded with more than 1 page. Not implemented yet"
+                      {:path (:path params)}))
+      body)))
 
 (defn- get-projects
   "Fetches the active projects from harvest. Caches the harvest

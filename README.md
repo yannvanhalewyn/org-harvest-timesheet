@@ -18,6 +18,8 @@ The file is separated into weeks, then into weekdays, then tasks. Each task uses
 In order to use this tool, run it with:
 
 ``` shell
+export HARVEST_ACCESS_TOKEN=xxx
+export HARVEST_ACCOUNT_ID=xxx
 clj -m hs.core sync <path/to/timesheet>
 ```
 
