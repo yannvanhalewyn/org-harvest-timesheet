@@ -42,3 +42,7 @@
 
 (defmacro with-file-cache [opts & body]
   `(with-file-cache* ~opts (fn [] ~@body)))
+
+(defn confirm! [msg]
+  (print msg "[y/N] ")
+  (= "y" (read-line)))

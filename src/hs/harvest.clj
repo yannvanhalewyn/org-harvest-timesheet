@@ -5,7 +5,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [hs.file :as file]
-            [hs.utils :refer [with-file-cache]]
+            [hs.utils :refer [with-file-cache parse-int confirm!]]
             [clj-time.core :as t]))
 
 (defn- parse-date [d]
@@ -14,10 +14,19 @@
 (defn- timestamp [d]
   (f/unparse (f/formatter :date-time-no-ms) d))
 
+(defn- date-readable [d]
+  (f/unparse (f/formatter "MMM d, yyyy") d))
+
+(defn- project-re [entry]
+  (re-pattern (str/join ".*" (:entry/project-handles entry))))
+
 (defn- project-search-name [p]
   (-> (str (:client/name p) (:project/name p))
       (str/replace #"\W" "")
       str/lower-case))
+
+(defn- log [msg]
+  (println "[Harvest]" msg))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsers
@@ -37,6 +46,16 @@
     {:task/id (:id task)
      :task/name (:name task)}))
 
+(defn- parse-entries [records]
+  (for [{:keys [project] :as r} records]
+    {:entry/id (:id r)
+     :entry/title (:notes r)
+     :entry/spent-at (f/parse (f/formatter :date) (:spent_date r))
+     :entry/hours (:hours r)
+     :entry/locked? (:is_locked r)
+     :project/name (:name project)
+     :project/id (:id project)}))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Client
 
@@ -52,10 +71,39 @@
     :query-params query-params
     :as :json}))
 
-(defn- get-projects* [client]
-  (println "Fetching harvest projects")
-  (request client {:path "/projects.json"
-                   :query-params {:is_active true}}))
+(defn- get-entries [client {:keys [from to]}]
+  (assert (t/before? from to))
+  (log (format "Fetching existing entries between %s and %s"
+               (date-readable from) (date-readable to)))
+  (let [user (:body (request client {:path "/users/me"}))]
+    (assert (:id user))
+    (-> (request client {:path "/time_entries"
+                         :query-params {:from (timestamp from)
+                                        :user_id (:id user)
+                                        :to (timestamp to)}})
+        :body :time_entries parse-entries)))
+
+(defn- delete-existing-entries?
+  "Checks for any existing entries in the time range. If any are
+  found, will:
+    - Print them out
+    - Throw if any of them are locked
+    - Ask to delete them otherwise, throw if cancelled by user."
+  [client {:keys [from to] :as args}]
+  (when-let [entries (seq (get-entries client args))]
+    (log "Existing entries have been found for that time range:")
+    (doseq [e entries]
+      (println (format "  %s [%s] %s"
+                       (date-readable (:entry/spent-at e))
+                       (:project/name e) (:entry/title e))))
+    (when (some :entry/locked? entries)
+      (throw (ex-info "Locked entries detected in given time range."
+                      {:type :harvest/cancelled})))
+    (if (confirm! "Would you like to delete those entries?")
+      (doseq [{:entry/keys [id]} entries]
+        (request client {:path (str "/time_entries/" id) :method :delete}))
+      (throw (ex-info "Won't delete conflicting entries"
+                      {:type :harvest/cancelled})))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public
@@ -63,11 +111,11 @@
 (defn make-client
   "Reads the access-token and account-id from the env"
   [& [{:keys [access-token account-id]}]]
-  {::access-token (or access-token (System/getenv "HARVEST_API_TOKEN"))
-   ::account-id (or account-id (System/getenv "HARVEST_ACCOUNT_ID"))
+  {::access-token (or access-token (System/getenv "HARVEST_ACCESS_TOKEN"))
+   ::account-id (or account-id (parse-int (System/getenv "HARVEST_ACCOUNT_ID")))
    ::data-dir (file/home ".harvest_sync")})
 
-(defn get-projects
+(defn- get-projects
   "Fetches the active projects from harvest. Caches the harvest
   response for one day."
   [{::keys [data-dir] :as client}]
@@ -75,9 +123,12 @@
    (:projects
     (with-file-cache {:ttl (weeks 1)
                       :file (io/file data-dir "cache/projects.edn")}
-      (:body (get-projects* client))))))
 
-(defn get-project-tasks
+      (log "Fetching projects")
+      (:body (request client {:path "/projects.json"
+                              :query-params {:is_active true}}))))))
+
+(defn- get-project-tasks
   [{::keys [data-dir] :as client} project-id]
   (parse-tasks
    (:task_assignments
@@ -87,7 +138,7 @@
         (:body (request client {:path path
                                 :query-params {:is_active true}})))))))
 
-(defn find-project
+(defn- find-project
   "Fetches the projects and attempts to find a match in the client
   name and task name. Will throw when none found, pick the most recent
   one if multiple are found."
@@ -97,11 +148,11 @@
     (when (empty? candidates)
       (throw (ex-info "Could not find project" {:name re})))
     (when (> (count candidates) 1)
-      (println (format "Multiple projects found for: '%s'. Picked: [%s] %s"
-                       re (:client/name pick) (:project/name pick))))
+      (log (format "Multiple projects found for: '%s'. Picked: [%s] %s"
+                   re (:client/name pick) (:project/name pick))))
     pick))
 
-(defn post-time-entry!
+(defn- post-time-entry*
   "Posts the time entry to Harvest. Will try to find a task for the
   given project. Throws if no task is found"
   [client project entry]
@@ -110,10 +161,10 @@
       (throw (ex-info "Could not find default task for project"
                       {:project-id (:project/id project)
                        :entry entry})))
-    (println (format "Pushing time-entry:\n  Entry: %s\n  Project: [%s] %s"
-                     (:entry/_raw entry)
-                     (:client/name project)
-                     (:project/name project)))
+    (log (format "Pushing time-entry:\n  Entry: %s\n  Project: [%s] %s"
+                 (:entry/_raw entry)
+                 (:client/name project)
+                 (:project/name project)))
     (request
      client
      {:path "/time_entries"
@@ -123,3 +174,24 @@
                :spent_date (timestamp (:entry/spent-at entry))
                :hours (:entry/hours entry)
                :notes (:entry/title entry)}})))
+
+
+(defn post-time-entries!
+  "Will push all entries to Harvest. Will check if existing entries
+  exist in that timerange. If so, will ask to delete those before
+  pushing."
+  [client entries]
+
+  ;; Check for existing entries
+  (let [dates (map :entry/spent-at entries)
+        from (apply t/min-date dates)
+        to (apply t/max-date dates)]
+    (delete-existing-entries? client {:from from :to to}))
+
+  ;; Push entries
+  (log (format "Syncing %s entries" (count entries)))
+  (let [projects (get-projects client)
+        with-projects (for [e entries]
+                        [e (find-project projects (project-re e))])]
+    (for [[entry project] (doall with-projects)] ;; Throw if not found
+      (post-time-entry* client project entry))))
