@@ -2,9 +2,9 @@
   (:require [clj-time.core :as t]
             [clojure.data.json :as json]
             [clojure.java.io :as io]
+            [clojure.spec.alpha :as s]
             [clojure.string :as str]
-            [hs.file :as file]
-            [clojure.spec.alpha :as s]))
+            [hs.file :as file]))
 
 (defn keywordize [s]
   (-> (str/lower-case s)
@@ -16,9 +16,8 @@
   (when-let [x (re-find #"^-?\d+$" (str s))]
     (Integer. x)))
 
-(defn read-json [filename]
-  (with-open [rdr (io/reader (io/file filename))]
-    (json/read rdr :key-fn keywordize)))
+(defn read-json [s]
+  (json/read-json s true))
 
 (defn assert-spec! [spec x]
   (when-not (s/valid? spec x)

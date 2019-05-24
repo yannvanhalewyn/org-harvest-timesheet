@@ -1,4 +1,5 @@
-{:deps
+{:paths ["src" "test" "resources"]
+ :deps
  {clj-time {:mvn/version "0.15.1"}
   clj-http {:mvn/version "3.9.1"}
   cheshire {:mvn/version "5.8.0"}}}

@@ -2,7 +2,7 @@
   (:require [clj-time.core :as t]
             [clojure.test :refer [are deftest is]]
             [hs.timesheet :as sut]
-            [hs.utils :refer [read-json]]))
+            [hs.org :as org]))
 
 (deftest parse-entry-title
   (are [in out] (= out (sut/parse-entry-title in))
@@ -37,4 +37,4 @@
                   :_raw "20 May | Tuesday | 17:00 - 19:30 Programming",
                   :spent-at (t/date-time 2019 05 21)
                   :name "Programming"}]
-         (sut/parse (read-json "resources/example_timesheet.json")))))
+         (sut/parse (org/->json "resources/example_timesheet.org")))))
