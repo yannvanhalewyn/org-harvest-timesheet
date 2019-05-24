@@ -128,14 +128,14 @@
     - Ask to delete them otherwise, throw if cancelled by user."
   [client {:keys [from to] :as args}]
   (when-let [entries (seq (get-entries client args))]
+    (when (some :entry/locked? entries)
+      (throw (ex-info "Locked entries detected in given time range."
+                      {:type :harvest/cancelled})))
     (log "Existing entries have been found for that time range:")
     (doseq [e entries]
       (log/info (format "  %s [%s] %s"
                         (date-readable (:entry/spent-at e))
                         (:project/name e) (:entry/title e))))
-    (when (some :entry/locked? entries)
-      (throw (ex-info "Locked entries detected in given time range."
-                      {:type :harvest/cancelled})))
     (if (confirm! "Would you like to delete those entries?")
       (doseq [{:entry/keys [id]} entries]
         (request client {:path (str "/time_entries/" id) :method :delete}))
