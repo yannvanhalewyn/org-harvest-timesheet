@@ -17,24 +17,19 @@
     "1 jul" "thursday" 7 4))
 
 (deftest parse
-  (is (= [#:entry{:hours 0.25,
+  (is (= [#:entry{:hours 1.0
+                  :title "QA + Depoy"
+                  :project-handles ["projectA"]
+                  :spent-at (t/date-time 2019 05 20)
+                  :_raw "20 May | Monday | 17:00 - 18:00 QA + Depoy"}
+          #:entry{:hours 0.25
+                  :title "Standup"
                   :project-handles ["brightmotive" "product"]
-                  :_raw "20 May | Monday | 11:15 - 11:30 Standup",
-                  :spent-at (t/date-time 2019 05 20)
-                  :title "Standup"}
-          #:entry{:hours 0.25,
-                  :project-handles ["projectA"],
-                  :_raw "20 May | Monday | 11:30 - 11:45 Review",
-                  :spent-at (t/date-time 2019 05 20)
-                  :title "Review"}
-          #:entry{:hours 1.0,
-                  :project-handles ["projectA"],
-                  :_raw "20 May | Tuesday | 16:00 - 17:00 Emails",
                   :spent-at (t/date-time 2019 05 21)
-                  :title "Emails"}
-          #:entry{:hours 2.5,
-                  :project-handles ["custA" "projectB"],
-                  :_raw "20 May | Tuesday | 17:00 - 19:30 Programming",
+                  :_raw "20 May | Tuesday | 10:30 - 10:45 Standup"}
+          #:entry{:hours 1.0
+                  :title "Fix bug"
+                  :project-handles ["customerA" "bugs"]
                   :spent-at (t/date-time 2019 05 21)
-                  :title "Programming"}]
-         (sut/parse (org/->json "resources/example_timesheet.org")))))
+                  :_raw "20 May | Tuesday | 11:30 - 12:30 Fix bug"}]
+         (take 3 (drop 5 (sut/parse (org/->json "resources/example_timesheet.org")))))))

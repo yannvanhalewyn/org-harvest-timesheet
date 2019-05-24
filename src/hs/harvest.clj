@@ -189,9 +189,8 @@
   (when (empty? entries)
     (throw (ex-info "No entries to push." {})))
   (let [projects (get-projects client)
-        with-projects (doall ;; Check for any errors before continuing
-                       (for [e entries]
-                         [e (find-project projects (project-re e))]))]
+        with-projects (for [e entries]
+                        [e (find-project projects (project-re e))])]
 
     ;; Check for existing entries
     (let [dates (map :entry/spent-at entries)
