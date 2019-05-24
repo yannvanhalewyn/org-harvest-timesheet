@@ -28,6 +28,17 @@
    :node/tags (:tags props)
    :node/children (map parse-node children)})
 
+(defn parse-entry-value
+  "Parses the raw text of an entry value like:
+     11u - 11u30: Something"
+  [s]
+  (if-let [[_ h1 m1 h2 m2 text]
+           (re-find #"(\d{2})u(?:(\d{2}))? - (\d{2})u(?:(\d{2}))?:(.*)" s)]
+    [(double (- (+ (parse-int h2) (if m2 (/ (parse-int m2) 60) 0))
+                (+ (parse-int h1) (if m1 (/ (parse-int m1) 60) 0))))
+     (str/trim text)]
+    (throw (ex-info "Could not parse time entry" {:value s}))))
+
 (defn parse-week [data]
   (let [root (parse-org-node data)
         weeks (:node/children root)
