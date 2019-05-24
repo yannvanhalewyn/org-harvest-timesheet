@@ -42,12 +42,12 @@
 
 (def ^:private BASE_URL "https://api.harvestapp.com/api/v2")
 
-(defn- request [{::keys [api-token account-id]} {:keys [method path params query-params]}]
+(defn- request [{::keys [access-token account-id]} {:keys [method path params query-params]}]
   (http/request
    {:url (str BASE_URL path)
     :method (or method :get)
     :headers {"Harvest-account-id" account-id
-              "Authorization" (str "Bearer " api-token)}
+              "Authorization" (str "Bearer " access-token)}
     :form-params params
     :query-params query-params
     :as :json}))
@@ -61,10 +61,10 @@
 ;; Public
 
 (defn make-client
-  "Reads the api-token and account-id from the env"
-  []
-  {::api-token (System/getenv "HARVEST_API_TOKEN")
-   ::account-id (System/getenv "HARVEST_ACCOUNT_ID")
+  "Reads the access-token and account-id from the env"
+  [& [{:keys [access-token account-id]}]]
+  {::access-token (or access-token (System/getenv "HARVEST_API_TOKEN"))
+   ::account-id (or account-id (System/getenv "HARVEST_ACCOUNT_ID"))
    ::data-dir (file/home ".harvest_sync")})
 
 (defn get-projects
