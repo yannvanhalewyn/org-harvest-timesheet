@@ -39,11 +39,18 @@
      (str/trim text)]
     (throw (ex-info "Could not parse time entry" {:value s}))))
 
+(defn parse-entry [{:node/keys [value tags]}]
+  (let [[duration name] (parse-entry-value value)]
+    {:entry/duration duration
+     :entry/name name
+     :entry/project (first tags)
+     :entry/_raw value}))
+
 (defn parse-week [data]
   (let [root (parse-org-node data)
         weeks (:node/children root)
         entries (mapcat :node/children (mapcat :node/children weeks))]
-    (map :node/value entries)))
+    (map parse-entry entries)))
 
 (comment
   (parse-week (read-json "timesheet.json"))
