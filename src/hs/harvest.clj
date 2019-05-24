@@ -19,14 +19,6 @@
       (str/replace #"\W" "")
       str/lower-case))
 
-(defn- project-matcher
-  "Returns a predicate function testing wether or not the project name
-  and client match the query. A '-' will serve as regex
-  wildcard. foo-bar => foo.*bar"
-  [q]
-  (let [re (re-pattern (str/join ".*" (str/split q #"-")))]
-    #(re-find re (project-search-name %))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsers
 
@@ -95,34 +87,39 @@
         (:body (request client {:path path
                                 :query-params {:is_active true}})))))))
 
-(defn find-project!
+(defn find-project
   "Fetches the projects and attempts to find a match in the client
   name and task name. Will throw when none found, pick the most recent
   one if multiple are found."
-  [client q]
-  (let [candidates (filter (project-matcher q) (get-projects client))
+  [projects re]
+  (let [candidates (filter (comp (partial re-find re) project-search-name) projects)
         pick (last (sort-by :project/updated-at candidates))]
     (when (empty? candidates)
-      (throw (ex-info "Could not find project" {:name q})))
+      (throw (ex-info "Could not find project" {:name re})))
     (when (> (count candidates) 1)
       (println (format "Multiple projects found for: '%s'. Picked: [%s] %s"
-                       q (:client/name pick) (:project/name pick))))
+                       re (:client/name pick) (:project/name pick))))
     pick))
 
 (defn post-time-entry!
   "Posts the time entry to Harvest. Will try to find a task for the
   given project. Throws if no task is found"
-  [client project-id entry]
-  (if-let [task (first (get-project-tasks client project-id))]
+  [client project entry]
+  (let [task (first (get-project-tasks client (:project/id project)))]
+    (when-not (:task/id task)
+      (throw (ex-info "Could not find default task for project"
+                      {:project-id (:project/id project)
+                       :entry entry})))
+    (println (format "Pushing time-entry:\n  Entry: %s\n  Project: [%s] %s"
+                     (:entry/_raw entry)
+                     (:client/name project)
+                     (:project/name project)))
     (request
      client
      {:path "/time_entries"
       :method :post
-      :params {:project_id project-id
+      :params {:project_id (:project/id project)
                :task_id (:task/id task)
                :spent_date (timestamp (:entry/spent-at entry))
                :hours (:entry/hours entry)
-               :notes (:entry/name entry)}})
-    (throw (ex-info "Could not find default task for project"
-                    {:project-id project-id
-                     :entry entry}))))
+               :notes (:entry/title entry)}})))
