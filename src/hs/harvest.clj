@@ -29,10 +29,10 @@
 
 (defn- log-entry [entry]
   (info (format "\t%s %s %s"
-                    (colorize :grey (date-readable (:entry/spent-at entry)))
-                    (colorize :cyan (format "[%s %s]" (:client/name entry)
-                                            (:project/name entry)))
-                    (:entry/title entry))))
+                (colorize :grey (date-readable (:entry/spent-at entry)))
+                (colorize :cyan (format "[%s %s]" (:client/name entry)
+                                        (:project/name entry)))
+                (:entry/title entry))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsers
@@ -150,21 +150,16 @@
 (defn- post-time-entry*
   "Posts the time entry to Harvest. Will try to find a task for the
   given project. Throws if no task is found"
-  [client project entry]
-  (let [task (first (get-project-tasks client (:project/id project)))]
-    (when-not (:task/id task)
-      (throw (ex-info "Could not find default task for project"
-                      {:project-id (:project/id project)
-                       :entry entry})))
-    (request
-     client
-     {:path "/time_entries"
-      :method :post
-      :params {:project_id (:project/id project)
-               :task_id (:task/id task)
-               :spent_date (timestamp (:entry/spent-at entry))
-               :hours (:entry/hours entry)
-               :notes (:entry/title entry)}})))
+  [client entry]
+  (request
+   client
+   {:path "/time_entries"
+    :method :post
+    :params {:project_id (:project/id entry)
+             :task_id (:task/id entry)
+             :spent_date (timestamp (:entry/spent-at entry))
+             :hours (:entry/hours entry)
+             :notes (:entry/title entry)}}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public
@@ -188,17 +183,21 @@
   (when (empty? entries)
     (throw (ex-info "No entries to push." {})))
   (let [projects (get-projects client)
-        with-projects (for [e entries]
-                        [e (find-project projects (project-re e))])]
+        dates (map :entry/spent-at entries)
+        entries (for [entry entries
+                      :let [project (find-project projects (project-re entry))
+                            task (first (get-project-tasks client (:project/id project)))]]
+                  (merge entry project task))]
+
+    (when-let [entry (first (remove :task/id entries))]
+      (throw (ex-info "Could not find default task for project" {:entry entry})))
 
     ;; Check for existing entries
-    (let [dates (map :entry/spent-at entries)
-          from (apply t/min-date dates)
-          to (apply t/max-date dates)]
-      (delete-existing-entries? client {:from from :to to}))
+    (delete-existing-entries? client {:from (apply t/min-date dates)
+                                      :to (apply t/max-date dates)})
 
     ;; Push entries
     (log (format "Syncing %s entries:" (count entries)))
-    (doseq [[entry project] with-projects]
-      (log-entry (merge project entry))
-      (post-time-entry* client project entry))))
+    (doseq [entry entries]
+      (log-entry entry)
+      (post-time-entry* client entry))))
