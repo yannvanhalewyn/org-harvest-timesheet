@@ -28,6 +28,13 @@
 (defn- log [msg]
   (log/info (log/color :yellow "[Harvest]") msg))
 
+(defn- log-entry [entry]
+  (log/info (format "\t%s %s %s"
+                    (log/color :grey (date-readable (:entry/spent-at entry)))
+                    (log/color :cyan (format  "[%s %s]" (:client/name entry)
+                                              (:project/name entry)))
+                    (:entry/title entry))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsers
 
@@ -47,14 +54,16 @@
      :task/name (:name task)}))
 
 (defn- parse-entries [records]
-  (for [{:keys [project] :as r} records]
+  (for [{:keys [project client] :as r} records]
     {:entry/id (:id r)
      :entry/title (:notes r)
      :entry/spent-at (f/parse (f/formatter :date) (:spent_date r))
      :entry/hours (:hours r)
      :entry/locked? (:is_locked r)
      :project/name (:name project)
-     :project/id (:id project)}))
+     :project/id (:id project)
+     :client/name (:name client)
+     :client/id (:id client)}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Client
@@ -132,10 +141,7 @@
       (throw (ex-info "Locked entries detected in given time range."
                       {:type :harvest/cancelled})))
     (log "Existing entries have been found for that time range:")
-    (doseq [e entries]
-      (log/info (format "  %s [%s] %s"
-                        (date-readable (:entry/spent-at e))
-                        (:project/name e) (:entry/title e))))
+    (doseq [e entries] (log-entry e))
     (if (confirm! "Would you like to delete those entries?")
       (doseq [{:entry/keys [id]} entries]
         (request client {:path (str "/time_entries/" id) :method :delete}))
@@ -151,10 +157,6 @@
       (throw (ex-info "Could not find default task for project"
                       {:project-id (:project/id project)
                        :entry entry})))
-    (log (format "Pushing time-entry:\n  Entry: %s\n  Project: [%s] %s"
-                 (:entry/_raw entry)
-                 (:client/name project)
-                 (:project/name project)))
     (request
      client
      {:path "/time_entries"
@@ -198,6 +200,7 @@
       (delete-existing-entries? client {:from from :to to}))
 
     ;; Push entries
-    (log (format "Syncing %s entries" (count entries)))
+    (log (format "Syncing %s entries:" (count entries)))
     (doseq [[entry project] with-projects]
+      (log-entry (merge project entry))
       (post-time-entry* client project entry))))

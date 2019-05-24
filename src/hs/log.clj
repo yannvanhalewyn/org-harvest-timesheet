@@ -10,7 +10,7 @@
                (range 30 38))))
 
 (defn color [color msg]
-  (str (COLORS color) msg (escape-code 0)))
+  (str (COLORS color 0) msg (escape-code 0)))
 
 (defn info [& args]
   (apply println args))
