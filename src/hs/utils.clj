@@ -1,7 +1,36 @@
 (ns hs.utils
   (:require [clj-time.core :as t]
+            [clojure.data.json :as json]
             [clojure.java.io :as io]
-            [hs.file :as file]))
+            [clojure.string :as str]
+            [hs.file :as file]
+            [clojure.spec.alpha :as s]))
+
+(defn keywordize [s]
+  (-> (str/lower-case s)
+      (str/replace "_" "-")
+      (str/replace "." "-")
+      (keyword)))
+
+(defn parse-int [s]
+  (when-let [x (re-find #"^-?\d+$" (str s))]
+    (Integer. x)))
+
+(defn read-json [filename]
+  (with-open [rdr (io/reader (io/file filename))]
+    (json/read rdr :key-fn keywordize)))
+
+(defn assert-spec! [spec x]
+  (when-not (s/valid? spec x)
+    (throw (ex-info "Spec failed!"
+                    {:spec spec
+                     :failure (s/explain-str spec x)
+                     :value x})))
+  x)
+
+(defn assert-spec+! [spec coll]
+  (doseq [x coll] (assert-spec! spec x))
+  coll)
 
 (defn with-file-cache* [{:keys [ttl file]} f]
   (if (or (not (file/exists? file))

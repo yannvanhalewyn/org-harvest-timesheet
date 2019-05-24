@@ -1,5 +1,5 @@
-(ns hs.core-test
-  (:require [hs.core :as sut]
+(ns hs.timesheet-test
+  (:require [hs.timesheet :as sut]
             [clojure.test :refer [deftest is are]]))
 
 (deftest parse-entry-value
