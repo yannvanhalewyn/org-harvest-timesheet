@@ -170,26 +170,33 @@
 (defn make-client
   "Reads the access-token and account-id from the env"
   [& [{:keys [access-token account-id]}]]
-  {::access-token (or access-token (System/getenv "HARVEST_ACCESS_TOKEN"))
-   ::account-id (or account-id (parse-int (System/getenv "HARVEST_ACCOUNT_ID")))
-   ::data-dir (file/home ".harvest_sync")})
+  (let [token (or access-token (System/getenv "HARVEST_ACCESS_TOKEN"))
+        account-id (or account-id (parse-int (System/getenv "HARVEST_ACCOUNT_ID")))]
+    (assert token "No harvest access token supplied")
+    (assert account-id "No harvest account-id")
+    {::access-token (or access-token (System/getenv "HARVEST_ACCESS_TOKEN"))
+     ::account-id (or account-id (parse-int (System/getenv "HARVEST_ACCOUNT_ID")))
+     ::data-dir (file/home ".harvest_sync")}))
 
 (defn post-time-entries!
   "Will push all entries to Harvest. Will check if existing entries
   exist in that timerange. If so, will ask to delete those before
   pushing."
   [client entries]
-
-  ;; Check for existing entries
-  (let [dates (map :entry/spent-at entries)
-        from (apply t/min-date dates)
-        to (apply t/max-date dates)]
-    (delete-existing-entries? client {:from from :to to}))
-
-  ;; Push entries
-  (log (format "Syncing %s entries" (count entries)))
+  (when (empty? entries)
+    (throw (ex-info "No entries to push." {})))
   (let [projects (get-projects client)
-        with-projects (for [e entries]
-                        [e (find-project projects (project-re e))])]
-    (for [[entry project] (doall with-projects)] ;; Throw if not found
+        with-projects (doall ;; Check for any errors before continuing
+                       (for [e entries]
+                         [e (find-project projects (project-re e))]))]
+
+    ;; Check for existing entries
+    (let [dates (map :entry/spent-at entries)
+          from (apply t/min-date dates)
+          to (apply t/max-date dates)]
+      (delete-existing-entries? client {:from from :to to}))
+
+    ;; Push entries
+    (log (format "Syncing %s entries" (count entries)))
+    (doseq [[entry project] with-projects]
       (post-time-entry* client project entry))))

@@ -11,3 +11,13 @@
   (harvest/post-time-entries!
    (harvest/make-client)
    (timesheet/parse (org/->json org-filename))))
+
+(defn -main [& [cmd arg1]]
+  (try
+    (case cmd
+      "sync" (sync! arg1)
+      (println "Usage:   harvest sync [filename]"))
+    (catch Exception e
+      (println "Exiting:" (.getMessage e) (ex-data e))
+      (System/exit -1)))
+  (System/exit 0))

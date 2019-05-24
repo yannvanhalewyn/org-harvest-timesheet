@@ -44,5 +44,5 @@
   `(with-file-cache* ~opts (fn [] ~@body)))
 
 (defn confirm! [msg]
-  (print msg "[y/N] ")
+  (println msg "[y/N]")
   (= "y" (read-line)))
