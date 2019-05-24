@@ -4,6 +4,7 @@
             [clj-time.format :as f]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [hs.log :as log]
             [hs.file :as file]
             [hs.utils :refer [confirm! parse-int with-file-cache]]))
 
@@ -25,7 +26,7 @@
       str/lower-case))
 
 (defn- log [msg]
-  (println "[Harvest]" msg))
+  (log/info (log/color :yellow "[Harvest]") msg))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsers
@@ -94,7 +95,7 @@
                          :query-params {:is_active true}}))))))
 
 (defn- get-entries [client {:keys [from to]}]
-  (assert (t/before? from to))
+  (assert (or (t/equal? from to) (t/before? from to)))
   (log (format "Fetching existing entries between %s and %s"
                (date-readable from) (date-readable to)))
   (let [user (request client {:path "/users/me"})]
@@ -129,9 +130,9 @@
   (when-let [entries (seq (get-entries client args))]
     (log "Existing entries have been found for that time range:")
     (doseq [e entries]
-      (println (format "  %s [%s] %s"
-                       (date-readable (:entry/spent-at e))
-                       (:project/name e) (:entry/title e))))
+      (log/info (format "  %s [%s] %s"
+                        (date-readable (:entry/spent-at e))
+                        (:project/name e) (:entry/title e))))
     (when (some :entry/locked? entries)
       (throw (ex-info "Locked entries detected in given time range."
                       {:type :harvest/cancelled})))
@@ -172,8 +173,8 @@
   [& [{:keys [access-token account-id]}]]
   (let [token (or access-token (System/getenv "HARVEST_ACCESS_TOKEN"))
         account-id (or account-id (parse-int (System/getenv "HARVEST_ACCOUNT_ID")))]
-    (assert token "No harvest access token supplied")
-    (assert account-id "No harvest account-id")
+    (when (or (not token) (not account-id))
+      (throw (ex-info "No harvest access token or account-id supplied" {})))
     {::access-token (or access-token (System/getenv "HARVEST_ACCESS_TOKEN"))
      ::account-id (or account-id (parse-int (System/getenv "HARVEST_ACCOUNT_ID")))
      ::data-dir (file/home ".harvest_sync")}))

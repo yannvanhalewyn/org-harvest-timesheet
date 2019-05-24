@@ -1,8 +1,8 @@
 (ns hs.core
   (:require [hs.harvest :as harvest]
+            [hs.log :as log]
             [hs.org :as org]
-            [hs.timesheet :as timesheet]
-            [clojure.string :as str]))
+            [hs.timesheet :as timesheet]))
 
 (defn sync!
   "Reads the org file, extracts the time entries and pushes them to
@@ -18,6 +18,6 @@
       "sync" (sync! arg1)
       (println "Usage:   harvest sync [filename]"))
     (catch Exception e
-      (println "Exiting:" (.getMessage e) (ex-data e))
+      (log/error (.getMessage e) (ex-data e))
       (System/exit -1)))
   (System/exit 0))
