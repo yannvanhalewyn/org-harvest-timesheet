@@ -1,6 +1,6 @@
 (ns hs.utils
   (:require [clj-time.core :as t]
-            [clojure.data.json :as json]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
             [clojure.string :as str]
@@ -17,7 +17,7 @@
     (Integer. x)))
 
 (defn read-json [s]
-  (json/read-json s true))
+  (json/parse-string s keywordize))
 
 (defn assert-spec! [spec x]
   (when-not (s/valid? spec x)
