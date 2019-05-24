@@ -9,7 +9,7 @@ This tool aims to parse a time sheet written in Org mode, extract time entries a
 
 A time sheet might look like this (how I do it, subject to my own personal preferences):
 
-![time sheet](/resources/screenshot.png)
+![time sheet](/resources/timesheet.png)
 
 The file is separated into weeks, then into weekdays, then tasks. Each task uses Org tags to specify the project. Every tag will be concatenated with a regex wildcard (.*) in order to search through harvest client and projects to find the correct project.
 
@@ -29,8 +29,11 @@ This will:
 - Parse the JSON into time entries
 - Find matching projects for every entry according to the tags
 - Fetch existing entries from harvest in same time range as the existing sheet
-- If any are found in that time range will ask to delete them (or will exit if locked entries are in that range)
-- If we made it this far, push those entries to Harvest.
+- If any are found in that time range it will diff them, proposing to delete the extras and push the missing entries
+
+---
+
+![terminal output example](/resources/terminal_output.png)
 
 ## License
 
