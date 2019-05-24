@@ -4,7 +4,8 @@
             [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
             [clojure.string :as str])
-  (:import org.joda.time.DateTime))
+  (:import org.joda.time.DateTime
+           org.jline.terminal.TerminalBuilder))
 
 (defn keywordize [s]
   (-> (str/lower-case s)
@@ -82,5 +83,15 @@
   (apply println (colorize :red "[ERROR]") args))
 
 (defn confirm! [msg]
-  (println "\n" msg "[y/N]")
-  (= "y" (read-line)))
+  (let [term (.. (TerminalBuilder/builder)
+                 (jna true) (system true) (build))
+        r (.reader term)
+        w (.writer term)]
+    (.print w (str msg " [y/N] "))
+    (.flush w)
+    (.enterRawMode term)
+    (let [result (.read r)]
+      (.close r)
+      (.close term)
+      (println)
+      (= 121 result))))
