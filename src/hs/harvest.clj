@@ -101,6 +101,7 @@
     (let [cache-key (format "cache/project_%s_tasks.edn" project-id)
           path (str "/projects/" project-id "/task_assignments")]
       (with-file-cache {:ttl (weeks 1) :file (io/file data-dir cache-key)}
+        (log (str "Fetching tasks for project" project-id))
         (request client {:path path
                          :query-params {:is_active true}}))))))
 

@@ -11,13 +11,13 @@ A time sheet might look like this (how I do it, subject to my own personal prefe
 
 ![time sheet](/.github/timesheet.png)
 
-The file is separated into weeks, then into weekdays, then tasks. Each task uses Org tags to specify the project. Every tag will be concatenated with a regex wildcard (.*) in order to search through harvest client and projects to find the correct project.
+The file is separated into weeks, then weekdays, then tasks. Each task uses Org tags to specify the project. Use the *%* character to represent a wildcard when searching for a client/project.
 
 ## Usage
 
 Install the [clojure tools.deps](https://clojure.org/guides/getting_started) and have a recent version of emacs (> 24) on your PATH.
 
-In order to use this tool, run it with:
+In order to test this tool immediately, use:
 
 ``` shell
 export HARVEST_ACCESS_TOKEN=xxx
@@ -25,26 +25,23 @@ export HARVEST_ACCOUNT_ID=xxx
 clj -m hs.core sync <path/to/timesheet> --default-project clientname-projectname
 ```
 
-Or compile the uberjar and add a script to your path
+To use this actively, build an uberjar and create a wrapper script on your PATH
 
 ``` shell
 clj -A:uberjar
-# created target/harvest_sync-0.0.1-standalone.jar
-```
+cp target/harvest_sync-0.0.1-standalone.jar ~/bin/harvest_sync.jar
 
-And create a wrapper script on your PATH for easy access
-
-``` shell
+# file: ~/bin/harvest
 #!/bin/sh
 
-java -jar <path/to/built/uberjar> \
+java -jar ~/bin/harvest_sync.jar \
   --harvest-access-token <token> \
   --harvest-account-id <account-id> \
   --default-project my-default-project \
   "$@"
 ```
 
-And use it with these options
+These are the supported options:
 
 ``` shell
 Usage: harvest sync FILENAME <options>

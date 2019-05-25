@@ -111,5 +111,5 @@
             (harvest/delete-entry! client id))
 
           (doseq [entry to-push]
-            (u/info (format-entry entry :green "PUSH"))
+            (u/info (format-entry entry :green "PUSH  "))
             (harvest/create-entry! client entry))))))
