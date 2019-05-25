@@ -86,7 +86,7 @@
   "Given a json datastructure which comes from serializing the org
   file, parse and return a list of entries ready to be pushed to the
   time tracker."
-  [data default-project]
+  [data {:keys [default-project week]}]
   (->> (parse-org-node data)
        (assert-spec! :node/model)
        (:node/children)

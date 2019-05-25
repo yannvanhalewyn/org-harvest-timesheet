@@ -37,7 +37,17 @@ And create a wrapper script on your PATH for easy access
 ``` shell
 #!/bin/sh
 
-java -jar <path/to/built/uberjar> sync <path/to/your/timesheet>
+java -jar <path/to/built/uberjar>
+```
+
+And use it with these options
+
+``` shell
+Usage: harvest sync FILENAME <options>
+
+  -p, --default-project PROJECT  Default project
+  -w, --week WEEK                The week. One of 'all', 'last' or a weekstring like '20 May'
+  -h, --help
 ```
 
 ## Methodology

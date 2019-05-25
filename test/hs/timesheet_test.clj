@@ -31,4 +31,4 @@
                       :title "Fix bug"
                       :project-handles ["customerA" "bugs"]
                       :spent-at (t/date-time 2019 05 21)}]
-             (take 3 (drop 5 (sut/parse data ["default" "project"]))))))))
+             (take 3 (drop 5 (sut/parse data {:default-options ["default" "project"]}))))))))
