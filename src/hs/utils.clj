@@ -23,7 +23,7 @@
   (json/parse-string s keywordize))
 
 (defn readable-date [d]
-  (f/unparse (f/formatter "MMM d, yyyy") d))
+  (f/unparse (f/formatter "E MMM d, yyyy") d))
 
 (defn assert-spec! [spec x]
   (when-not (s/valid? spec x)
