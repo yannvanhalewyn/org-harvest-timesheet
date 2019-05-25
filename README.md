@@ -9,7 +9,7 @@ This tool aims to parse a time sheet written in Org mode, extract time entries a
 
 A time sheet might look like this (how I do it, subject to my own personal preferences):
 
-![time sheet](/resources/timesheet.png)
+![time sheet](/.github/timesheet.png)
 
 The file is separated into weeks, then into weekdays, then tasks. Each task uses Org tags to specify the project. Every tag will be concatenated with a regex wildcard (.*) in order to search through harvest client and projects to find the correct project.
 
@@ -33,7 +33,7 @@ This will:
 
 ---
 
-![terminal output example](/resources/terminal_output.png)
+![terminal output example](/.github/terminal_output.png)
 
 ## License
 
