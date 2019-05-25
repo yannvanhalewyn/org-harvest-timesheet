@@ -17,6 +17,10 @@
     "The week. One of 'all', 'last' or a weekstring like '20 May'"
     :default :all
     :parse-fn #(case % ("all" "last") (keyword %) %)]
+   ["-t" "--harvest-access-token TOKEN"
+    "The Harvest access token, defaults to HARVEST_ACCESS_TOKEN env"]
+   ["-a" "--harvest-account-id ACCOUNT_ID"
+    "The Harvest access token, defaults to HARVEST_ACCOUNT_ID env"]
    ["-h" "--help" "Show this message"]])
 
 (defn- sync!
@@ -24,7 +28,7 @@
   harvest"
   [org-filename options]
   (sync/sync!
-   (harvest/make-client)
+   (harvest/make-client options)
    (timesheet/parse (org/->json org-filename) options)))
 
 (defn- print-usage [summary]

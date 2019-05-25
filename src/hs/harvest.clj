@@ -72,13 +72,14 @@
 
 (defn make-client
   "Reads the access-token and account-id from the env"
-  [& [{:keys [access-token account-id]}]]
-  (let [token (or access-token (System/getenv "HARVEST_ACCESS_TOKEN"))
-        account-id (or account-id (parse-int (System/getenv "HARVEST_ACCOUNT_ID")))]
+  [& [{:keys [harvest-access-token harvest-account-id]}]]
+  (let [token (or harvest-access-token (System/getenv "HARVEST_ACCESS_TOKEN"))
+        account-id (or harvest-account-id
+                       (parse-int (System/getenv "HARVEST_ACCOUNT_ID")))]
     (when (or (not token) (not account-id))
       (throw (ex-info "No harvest access token or account-id supplied" {})))
-    {::access-token (or access-token (System/getenv "HARVEST_ACCESS_TOKEN"))
-     ::account-id (or account-id (parse-int (System/getenv "HARVEST_ACCOUNT_ID")))
+    {::access-token token
+     ::account-id account-id
      ::data-dir (u/home-dir ".harvest_sync")}))
 
 (defn get-projects

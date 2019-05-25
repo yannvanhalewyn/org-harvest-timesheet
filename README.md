@@ -37,7 +37,11 @@ And create a wrapper script on your PATH for easy access
 ``` shell
 #!/bin/sh
 
-java -jar <path/to/built/uberjar> "$@" --default-project my-default-project
+java -jar <path/to/built/uberjar> \
+  --harvest-access-token <token> \
+  --harvest-account-id <account-id> \
+  --default-project my-default-project \
+  "$@"
 ```
 
 And use it with these options
@@ -45,10 +49,12 @@ And use it with these options
 ``` shell
 Usage: harvest sync FILENAME <options>
 
-  -p, --default-project PROJECT        Default project
-  -w, --week WEEK                :all  The week. One of 'all', 'last' or a weekstring like '20 May'
-  -h, --help                           Show this message
-  ```
+  -p, --default-project PROJECT              Default project
+  -w, --week WEEK                      :all  The week. One of 'all', 'last' or a weekstring like '20 May'
+  -t, --harvest-access-token TOKEN           The Harvest access token, defaults to HARVEST_ACCESS_TOKEN env
+  -a, --harvest-account-id ACCOUNT_ID        The Harvest access token, defaults to HARVEST_ACCOUNT_ID env
+  -h, --help                                 Show this message
+```
 
 ## Methodology
 
