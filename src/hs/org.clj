@@ -14,7 +14,7 @@
                    "cli-org-export-json" filename)]
     (if (zero? (:exit result))
       (read-json (:out result))
-      (throw (ex-info "Could not parse org file"
-                      {:file filename
-                       :status (:exit result)
-                       :output (:out result)})))))
+      (throw (ex-info (str "Could not parse org file. Make sure an up "
+                           "to date version of emacs is installed and "
+                           "on the classpath")
+                      (assoc result :file filename))))))
