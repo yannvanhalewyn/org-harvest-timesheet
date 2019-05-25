@@ -88,7 +88,9 @@
         :entry/title title
         :entry/spent-at time
         :entry/project-handles
-        (str/split (or (first (:node/tags entry)) default-project) #"%")}))))
+        (str/split (or (first (:node/tags entry)) default-project
+                       (throw (ex-info "No project specified" {:entry entry})))
+                   #"%")}))))
 
 (defn parse
   "Given a json datastructure which comes from serializing the org
