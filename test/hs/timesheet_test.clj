@@ -1,8 +1,8 @@
 (ns hs.timesheet-test
   (:require [clj-time.core :as t]
             [clojure.test :refer [are deftest is]]
-            [hs.timesheet :as sut]
-            [hs.org :as org]))
+            [hs.org :as org]
+            [hs.timesheet :as sut]))
 
 (deftest parse-entry-title
   (are [in out] (= out (sut/parse-entry-title in))

@@ -1,7 +1,7 @@
 (ns hs.org
-  (:require [hs.utils :refer [read-json file-exists? info]]
-            [clojure.java.io :as io]
-            [clojure.java.shell :refer [sh]]))
+  (:require [clojure.java.io :as io]
+            [clojure.java.shell :refer [sh]]
+            [hs.utils :refer [file-exists? info read-json]]))
 
 (defn ->json [filename]
   (when-not (file-exists? (io/file filename))

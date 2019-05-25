@@ -1,8 +1,8 @@
 (ns hs.core
   (:require [hs.harvest :as harvest]
             [hs.org :as org]
-            [hs.utils :refer [error]]
-            [hs.timesheet :as timesheet]))
+            [hs.timesheet :as timesheet]
+            [hs.utils :refer [error]]))
 
 (defn sync!
   "Reads the org file, extracts the time entries and pushes them to

@@ -4,8 +4,8 @@
             [clj-time.format :as f]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [hs.utils :refer [confirm! parse-int with-file-cache home-dir
-                              info colorize]]))
+            [hs.utils :refer [colorize confirm! home-dir info
+                              parse-int with-file-cache]]))
 
 (defn- parse-date [d]
   (f/parse (f/formatter :date-time-no-ms) d))

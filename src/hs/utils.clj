@@ -1,11 +1,11 @@
 (ns hs.utils
-  (:require [clj-time.core :as t]
-            [cheshire.core :as json]
+  (:require [cheshire.core :as json]
+            [clj-time.core :as t]
             [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
             [clojure.string :as str])
-  (:import org.joda.time.DateTime
-           org.jline.terminal.TerminalBuilder))
+  (:import org.jline.terminal.TerminalBuilder
+           org.joda.time.DateTime))
 
 (defn keywordize [s]
   (-> (str/lower-case s)

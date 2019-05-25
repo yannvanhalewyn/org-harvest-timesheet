@@ -1,8 +1,8 @@
 (ns hs.timesheet
-  (:require [clojure.spec.alpha :as s]
+  (:require [clj-time.core :as t]
+            [clojure.spec.alpha :as s]
             [clojure.string :as str]
-            [hs.utils :refer [keywordize parse-int assert-spec! assert-spec+!]]
-            [clj-time.core :as t]))
+            [hs.utils :refer [assert-spec! assert-spec+! keywordize parse-int]]))
 
 (def DEFAULT_PROJECT_HANDLES ["brightmotive" "product"])
 
@@ -56,8 +56,7 @@
   (let [[d m] (str/split week-str #" ")
         year (t/year (t/now))
         month (inc (index-of MONTHS m))
-        day (+ (parse-int d)
-               (index-of WEEKDAYS weekday-str))]
+        day (+ (parse-int d) (index-of WEEKDAYS weekday-str))]
     (t/date-time year month day)))
 
 (defn parse-entry-title
