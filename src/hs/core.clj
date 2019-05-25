@@ -48,6 +48,8 @@
           "sync" (sync! (second arguments) options)
           (print-usage summary))
         (catch Exception e
-          (error (.getMessage e) (ex-data e))
+          (if-let [msg (.getMessage e)]
+            (error (.getMessage e) (ex-data e))
+            (.printStackTrace e))
           (System/exit -1))))
     (System/exit 0)))
