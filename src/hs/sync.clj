@@ -78,7 +78,7 @@
     (when-let [entry (first (remove :task/id to-push))]
       (throw (ex-info "Could not find default task for project" {:entry entry})))
 
-    (when (some :entry/locked? to-delete)
+    (when (some :entry/locked? existing-entries)
       (throw (ex-info "Locked entries detected in given time range."
                       {:type :harvest/cancelled})))
 
