@@ -89,7 +89,7 @@
         :entry/spent-at time
         :entry/project-handles
         (str/split (or (first (:node/tags entry)) default-project
-                       (throw (ex-info "No project specified" {:entry entry})))
+                       (throw (ex-info "No project specified" entry)))
                    #"%")}))))
 
 (defn parse

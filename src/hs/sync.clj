@@ -40,7 +40,7 @@
         candidates (filter (comp (partial re-find re) project-search-name) projects)
         pick (last (sort-by :project/updated-at candidates))]
     (when (empty? candidates)
-      (throw (ex-info "Could not find project" {:name re})))
+      (throw (ex-info "Could not find project for entry" entry)))
     (when (> (count candidates) 1)
       (log (format "Multiple projects found for: '%s'. Picked: %s"
                    re (format-project-name pick))))
@@ -84,31 +84,25 @@
         {:keys [to-push to-delete]} (compare-entries entries existing-entries)]
 
     (when-let [entry (first (remove :task/id to-push))]
-      (throw (ex-info "Could not find default task for project" {:entry entry})))
+      (throw (ex-info "Could not find default task for project" entry)))
 
     (when-let [locked-entries (seq (filter :entry/locked? existing-entries))]
       (log-entries locked-entries :red "LOCKED")
       (throw (ex-info "Locked entries detected in given time range."
                       {:type :sync/cancelled})))
 
-    (when (seq to-delete)
-      (u/info (str "\nThese entries will be " (u/colorize :red "DELETED")))
-      (log-entries to-delete))
-
-    (when (seq to-push)
-      (u/info (str "\nThese entries will be " (u/colorize :green "PUSHED")))
-      (log-entries to-push))
+    (doseq [[c msg coll] [[:red "DELETED" to-delete] [:green "PUSHED" to-push]]]
+      (when (seq coll)
+        (u/info "\nThese entries will be" (u/colorize c msg))
+        (log-entries coll)))
 
     (if (every? empty? [to-push to-delete])
       (log "Nothing to be done.")
-      (do (when-not (u/confirm! "\nApply?")
-            (throw (ex-info "User cancelled operation"
-                            {:type :sync/cancelled})))
+      (when (u/confirm! "\nApply?")
+        (doseq [{:entry/keys [id] :as entry} to-delete]
+          (u/info (format-entry entry :red "DELETE"))
+          (harvest/delete-entry! client id))
 
-          (doseq [{:entry/keys [id] :as entry} to-delete]
-            (u/info (format-entry entry :red "DELETE"))
-            (harvest/delete-entry! client id))
-
-          (doseq [entry to-push]
-            (u/info (format-entry entry :green "PUSH  "))
-            (harvest/create-entry! client entry))))))
+        (doseq [entry to-push]
+          (u/info (format-entry entry :green "PUSH  "))
+          (harvest/create-entry! client entry))))))

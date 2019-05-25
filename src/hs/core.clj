@@ -53,12 +53,12 @@
    (timesheet/parse (org/->json filename) options)))
 
 (defn -main [& args]
-  (let [{:keys [exit-msg ok? action opts args]} (parse-args args)]
+  (let [{:keys [exit-msg ok? opts]} (parse-args args)]
     (if exit-msg
       (exit exit-msg ok?)
       (try
         (sync! opts)
-        (System/exit 0)
         (catch Exception e
           (let [msg (or (.getMessage e) (stacktrace-str e))]
-            (exit (str msg "\n" (ex-data e)) false)))))))
+            (exit (str msg "\n" (ex-data e)) false))))))
+  (exit "Bye" true))
