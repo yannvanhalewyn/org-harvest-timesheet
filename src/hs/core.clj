@@ -11,8 +11,8 @@
 ;; harvest sync file.org --default-project foo-bar --week all|last|"20 May"
 
 (def cli-options
-  [["-p" "--default-project PROJECT" "Default project"
-    :parse-fn #(when % (str/split % #"-"))]
+  [["-p" "--default-project PROJECT"
+    "Default project. Same as org tags, use % as a wildcard"]
    ["-w" "--week WEEK"
     "The week. One of 'all', 'last' or a weekstring like '20 May'"
     :default :all

@@ -86,8 +86,9 @@
                  [hours title] (parse-entry-title (:node/title entry))]]
        {:entry/hours hours
         :entry/title title
-        :entry/project-handles (or (:node/tags entry) default-project)
-        :entry/spent-at time}))))
+        :entry/spent-at time
+        :entry/project-handles
+        (str/split (or (first (:node/tags entry)) default-project) #"%")}))))
 
 (defn parse
   "Given a json datastructure which comes from serializing the org

@@ -8,4 +8,4 @@
 *** 10:45 - 12:30 Programming                                              :projectA:
 ** Tuesday
 *** 10:30 - 10:45 Standup
-*** 11:30 - 12:30 Fix bug                                                  :customerA:bugs:
+*** 11:30 - 12:30 Fix bug                                                  :customerA%bugs:

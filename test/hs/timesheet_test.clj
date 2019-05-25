@@ -45,7 +45,7 @@
 
 (deftest parse
   (let [data (org/->json "resources/example_timesheet.org")
-        opts {:default-project ["default" "project"]}]
+        opts {:default-project "default%project"}]
     (testing "Can read org files and parse the entries"
       (is (= ALL (sut/parse data opts))))
 
