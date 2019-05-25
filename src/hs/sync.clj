@@ -50,8 +50,7 @@
 ;; Comparing local <> remote entries
 
 (def ^:private comparable
-  (juxt :entry/title :project/id :client/id :entry/spent-at
-        :entry/hours))
+  (juxt :project/id :entry/title :entry/spent-at :entry/hours))
 
 (defn- compare-entries
   "Will compare a local set and remote set of entries. Will return the
