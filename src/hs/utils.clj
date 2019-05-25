@@ -1,6 +1,7 @@
 (ns hs.utils
   (:require [cheshire.core :as json]
             [clj-time.core :as t]
+            [clj-time.format :as f]
             [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
             [clojure.string :as str])
@@ -19,6 +20,9 @@
 
 (defn read-json [s]
   (json/parse-string s keywordize))
+
+(defn readable-date [d]
+  (f/unparse (f/formatter "MMM d, yyyy") d))
 
 (defn assert-spec! [spec x]
   (when-not (s/valid? spec x)

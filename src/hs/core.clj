@@ -1,14 +1,15 @@
 (ns hs.core
-  (:require [hs.harvest :as harvest]
+  (:require [hs.sync :as sync]
+            [hs.harvest :as harvest]
             [hs.org :as org]
             [hs.timesheet :as timesheet]
             [hs.utils :refer [error]]))
 
-(defn sync!
+(defn- sync!
   "Reads the org file, extracts the time entries and pushes them to
   harvest"
   [org-filename]
-  (harvest/sync!
+  (sync/sync!
    (harvest/make-client)
    (timesheet/parse (org/->json org-filename))))
 
