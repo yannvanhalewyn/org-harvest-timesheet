@@ -90,7 +90,7 @@
     (when-let [locked-entries (seq (filter :entry/locked? existing-entries))]
       (log-entries locked-entries :red "LOCKED")
       (throw (ex-info "Locked entries detected in given time range."
-                      {:type :harvest/cancelled})))
+                      {:type :sync/cancelled})))
 
     (when (seq to-delete)
       (u/info (str "\nThese entries will be " (u/colorize :red "DELETED")))
@@ -104,7 +104,7 @@
       (log "Nothing to be done.")
       (do (when-not (u/confirm! "\nApply?")
             (throw (ex-info "User cancelled operation"
-                            {:type :harvest/cancelled})))
+                            {:type :sync/cancelled})))
 
           (doseq [{:entry/keys [id] :as entry} to-delete]
             (u/info (format-entry entry :red "DELETE"))
