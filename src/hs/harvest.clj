@@ -12,7 +12,7 @@
   (f/unparse (f/formatter :date-time-no-ms) d))
 
 (defn- log [msg]
-  (u/info (u/colorize :yellow "[Harvest]") msg))
+  (u/info (u/colorize :yellow "Harvest") msg))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsers

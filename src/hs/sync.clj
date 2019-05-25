@@ -5,7 +5,7 @@
             [hs.utils :as u]))
 
 (defn- log [msg]
-  (u/info (u/colorize :yellow "[Sync]") msg))
+  (u/info (u/colorize :yellow "Sync") msg))
 
 (defn- log-entry [entry]
   (format "%s %s %s"

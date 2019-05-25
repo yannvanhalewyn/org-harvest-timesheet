@@ -85,7 +85,7 @@
   (apply println args))
 
 (defn error [& args]
-  (apply println (colorize :red "[ERROR]") args))
+  (apply println (colorize :red "Error") args))
 
 (defn confirm! [msg]
   (let [term (.. (TerminalBuilder/builder)
