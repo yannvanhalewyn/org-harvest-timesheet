@@ -1,6 +1,11 @@
-{:paths ["src" "test" "resources"]
- :deps
- {clj-time {:mvn/version "0.15.1"}
-  clj-http {:mvn/version "3.9.1"}
-  cheshire {:mvn/version "5.8.0"}
-  org.jline/jline {:mvn/version "3.11.0"}}}
+{:mvn/repos {"central" {:url "https://repo1.maven.org/maven2/"}
+             "clojars" {:url "https://repo.clojars.org/"}} ;; Needed for uberjar
+ :paths ["src" "test" "resources"]
+ :deps {clj-time {:mvn/version "0.15.1"}
+        clj-http {:mvn/version "3.9.1"}
+        cheshire {:mvn/version "5.8.0"}
+        org.jline/jline {:mvn/version "3.11.0"}}
+ :aliases {:uberjar {:extra-deps {luchiniatwork/cambada {:mvn/version "1.0.0"}}
+                     :main-opts ["-m" "cambada.uberjar"
+                                 "-m" "hs.core"
+                                 "--app-version" "0.0.1"]}}}

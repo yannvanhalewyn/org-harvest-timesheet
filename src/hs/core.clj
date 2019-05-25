@@ -1,4 +1,5 @@
 (ns hs.core
+  (:gen-class)
   (:require [hs.sync :as sync]
             [hs.harvest :as harvest]
             [hs.org :as org]

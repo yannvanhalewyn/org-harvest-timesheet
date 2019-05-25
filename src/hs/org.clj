@@ -8,10 +8,15 @@
     (throw (ex-info (str "Could not find file: " filename)
                     {:filename filename})))
   (info (format "Transforming %s to json" filename))
-  (let [el-lib (io/file (io/resource "org2json.el"))
-        result (sh "emacs" "--no-site-file" "--no-init-file" "-batch"
-                   "-l" (.getAbsolutePath el-lib) "-f"
-                   "cli-org-export-json" filename)]
+
+  ;; When running in an uberjar, we need to copy the emacs-lisp file
+  ;; out of the jar so that emacs can require it.
+  (let [tmp (java.io.File/createTempFile "org2json" ".el")
+        _ (spit tmp (slurp (io/resource "org2json.el")))
+        result (sh "emacs" "--no-init-file" "-batch" "--quick"
+                   "-l" (.getAbsolutePath tmp) "-f" "cli-org-export-json"
+                   filename)]
+    (io/delete-file tmp true)
     (if (zero? (:exit result))
       (read-json (:out result))
       (throw (ex-info (str "Could not parse org file. Make sure an up "
