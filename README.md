@@ -15,6 +15,8 @@ The file is separated into weeks, then into weekdays, then tasks. Each task uses
 
 ## Usage
 
+Install the [clojure tools.deps](https://clojure.org/guides/getting_started) and have a recent version of emacs (> 24) on your PATH.
+
 In order to use this tool, run it with:
 
 ``` shell
@@ -23,13 +25,29 @@ export HARVEST_ACCOUNT_ID=xxx
 clj -m hs.core sync <path/to/timesheet>
 ```
 
-This will:
+Or compile the uberjar and add a script to your path
+
+``` shell
+clj -A:uberjar
+# created target/harvest_sync-0.0.1-standalone.jar
+```
+
+And create a wrapper script on your PATH for easy access
+
+``` shell
+#!/bin/sh
+
+java -jar <path/to/built/uberjar> sync <path/to/your/timesheet>
+```
+
+## Methodology
 
 - Transform the Org file to JSON
 - Parse the JSON into time entries
-- Find matching projects for every entry according to the tags
-- Fetch existing entries from harvest in same time range as the existing sheet
-- If any are found in that time range it will diff them, proposing to delete the extras and push the missing entries
+- Find matching projects for every entry according to the tags - projects are cached in `~/.harvest_sync/cache`
+- Fetch existing entries from Harvest in same time range as the entries found in the timesheet
+- Diff the local entries with the remote entries
+- Display the diff (to add, to delete) and only when user confirms apply it
 
 ---
 
