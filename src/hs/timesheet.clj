@@ -5,8 +5,6 @@
             [hs.utils :refer [assert-spec! assert-spec+! keywordize parse-int]])
   (:import clojure.lang.PersistentVector))
 
-(def DEFAULT_PROJECT_HANDLES ["brightmotive" "product"])
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Specs
 
@@ -73,7 +71,7 @@
 
 (defn- time-entries
   "Given a week node, parse the entries duration, title and timestamp"
-  [week]
+  [default-project week]
   (flatten
    (for [day (:node/children week)]
      (for [entry (:node/children day)
@@ -81,18 +79,18 @@
                  [hours title] (parse-entry-title (:node/title entry))]]
        {:entry/hours hours
         :entry/title title
-        :entry/project-handles (or (:node/tags entry) DEFAULT_PROJECT_HANDLES)
+        :entry/project-handles (or (:node/tags entry) default-project)
         :entry/spent-at time}))))
 
 (defn parse
   "Given a json datastructure which comes from serializing the org
   file, parse and return a list of entries ready to be pushed to the
   time tracker."
-  [data]
+  [data default-project]
   (->> (parse-org-node data)
        (assert-spec! :node/model)
        (:node/children)
-       (mapcat time-entries)
+       (mapcat (partial time-entries default-project))
        (assert-spec+! :entry/model)))
 
 (comment

@@ -22,7 +22,7 @@ In order to use this tool, run it with:
 ``` shell
 export HARVEST_ACCESS_TOKEN=xxx
 export HARVEST_ACCOUNT_ID=xxx
-clj -m hs.core sync <path/to/timesheet>
+clj -m hs.core sync <path/to/timesheet> --default-project clientname-projectname
 ```
 
 Or compile the uberjar and add a script to your path

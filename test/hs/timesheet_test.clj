@@ -1,6 +1,6 @@
 (ns hs.timesheet-test
   (:require [clj-time.core :as t]
-            [clojure.test :refer [are deftest is]]
+            [clojure.test :refer [deftest testing is are]]
             [hs.org :as org]
             [hs.timesheet :as sut]))
 
@@ -17,16 +17,18 @@
     "1 jul" "thursday" 7 4))
 
 (deftest parse
-  (is (= [#:entry{:hours 1.0
-                  :title "QA + Depoy"
-                  :project-handles ["projectA"]
-                  :spent-at (t/date-time 2019 05 20)}
-          #:entry{:hours 0.25
-                  :title "Standup"
-                  :project-handles ["brightmotive" "product"]
-                  :spent-at (t/date-time 2019 05 21)}
-          #:entry{:hours 1.0
-                  :title "Fix bug"
-                  :project-handles ["customerA" "bugs"]
-                  :spent-at (t/date-time 2019 05 21)}]
-         (take 3 (drop 5 (sut/parse (org/->json "resources/example_timesheet.org")))))))
+  (let [data (org/->json "resources/example_timesheet.org")]
+    (testing "Can read org files and parse the entries"
+      (is (= [#:entry{:hours 1.0
+                      :title "QA + Depoy"
+                      :project-handles ["projectA"]
+                      :spent-at (t/date-time 2019 05 20)}
+              #:entry{:hours 0.25
+                      :title "Standup"
+                      :project-handles ["default" "project"]
+                      :spent-at (t/date-time 2019 05 21)}
+              #:entry{:hours 1.0
+                      :title "Fix bug"
+                      :project-handles ["customerA" "bugs"]
+                      :spent-at (t/date-time 2019 05 21)}]
+             (take 3 (drop 5 (sut/parse data ["default" "project"]))))))))
