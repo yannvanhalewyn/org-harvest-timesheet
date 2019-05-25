@@ -37,7 +37,7 @@ And create a wrapper script on your PATH for easy access
 ``` shell
 #!/bin/sh
 
-java -jar <path/to/built/uberjar>
+java -jar <path/to/built/uberjar> "$@" --default-project my-default-project
 ```
 
 And use it with these options
