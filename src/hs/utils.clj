@@ -28,10 +28,9 @@
 
 (defn assert-spec! [spec x]
   (when-not (s/valid? spec x)
-    (throw (ex-info "Spec failed!"
-                    {:spec spec
-                     :failure (s/explain-str spec x)
-                     :value x})))
+    (throw (ex-info (str "Validation of " spec " failed")
+                    {:failure (str/trim (s/explain-str spec x))
+                     :spec spec :value x})))
   x)
 
 (defn assert-spec+! [spec coll]

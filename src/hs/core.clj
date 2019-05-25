@@ -1,6 +1,7 @@
 (ns hs.core
   (:gen-class)
-  (:require [clojure.string :as str]
+  (:require [clojure.pprint :refer [pprint]]
+            [clojure.string :as str]
             [clojure.tools.cli :as cli]
             [hs.harvest :as harvest]
             [hs.org :as org]
@@ -39,10 +40,14 @@
         (exit-with-summary "No filename provided"))
       :else (exit-with-summary (str "No such action: " (first arguments))))))
 
-(defn- exit [msg ok?]
+(defn- exit! [msg ok?]
   (let [[log exit-code] (if ok? [info 0] [error -1])]
     (log msg)
     (System/exit exit-code)))
+
+(defn- explain [^Throwable e]
+  (str (or (.getMessage e) (stacktrace-str e)) "\n"
+       (when-let [d (ex-data e)] (with-out-str (pprint d)))))
 
 (defn- sync!
   "Reads the org file, extracts the time entries and pushes them to
@@ -55,10 +60,7 @@
 (defn -main [& args]
   (let [{:keys [exit-msg ok? opts]} (parse-args args)]
     (if exit-msg
-      (exit exit-msg ok?)
-      (try
-        (sync! opts)
-        (catch Exception e
-          (let [msg (or (.getMessage e) (stacktrace-str e))]
-            (exit (str msg "\n" (ex-data e)) false))))))
-  (exit "Bye" true))
+      (exit! exit-msg ok?)
+      (try (sync! opts)
+           (catch Exception e (exit! (explain e) false)))))
+  (exit! "Bye" true))
