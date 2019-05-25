@@ -7,12 +7,21 @@
 (defn- log [msg]
   (u/info (u/colorize :yellow "Sync") msg))
 
-(defn- log-entry [entry]
-  (format "%s %s %s"
+(defn- format-project-name [entry]
+  (u/colorize :cyan (format "[%s %s]" (:client/name entry)
+                            (:project/name entry))))
+
+(defn- format-entry [entry & [prefix-color prefix]]
+  (format "    %s %s %s %s"
+          (if prefix (u/colorize prefix-color prefix) "")
           (u/colorize :grey (u/readable-date (:entry/spent-at entry)))
-          (u/colorize :cyan (format "[%s %s]" (:client/name entry)
-                                    (:project/name entry)))
+          (format-project-name entry)
           (:entry/title entry)))
+
+(defn- log-entries [entries & [prefix-color prefix]]
+  (u/info "")
+  (doseq [entry entries] (u/info (format-entry entry prefix-color prefix)))
+  (u/info ""))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Finding project for entry
@@ -33,8 +42,8 @@
     (when (empty? candidates)
       (throw (ex-info "Could not find project" {:name re})))
     (when (> (count candidates) 1)
-      (log (format "Multiple projects found for: '%s'. Picked: [%s] %s"
-                   re (:client/name pick) (:project/name pick))))
+      (log (format "Multiple projects found for: '%s'. Picked: %s"
+                   re (format-project-name pick))))
     pick))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -78,17 +87,18 @@
     (when-let [entry (first (remove :task/id to-push))]
       (throw (ex-info "Could not find default task for project" {:entry entry})))
 
-    (when (some :entry/locked? existing-entries)
+    (when-let [locked-entries (seq (filter :entry/locked? existing-entries))]
+      (log-entries locked-entries :red "LOCKED")
       (throw (ex-info "Locked entries detected in given time range."
                       {:type :harvest/cancelled})))
 
     (when (seq to-delete)
       (u/info (str "\nThese entries will be " (u/colorize :red "DELETED")))
-      (doseq [e to-delete] (u/info (str "\t" (log-entry e)))))
+      (log-entries to-delete))
 
     (when (seq to-push)
-      (u/info (str "\nThese entries will be " (u/colorize :green "ADDED")))
-      (doseq [e to-push] (u/info (str "\t" (log-entry e)))))
+      (u/info (str "\nThese entries will be " (u/colorize :green "PUSHED")))
+      (log-entries to-push))
 
     (if (every? empty? [to-push to-delete])
       (log "Nothing to be done.")
@@ -97,9 +107,9 @@
                             {:type :harvest/cancelled})))
 
           (doseq [{:entry/keys [id] :as entry} to-delete]
-            (u/info (str (u/colorize :red "\tDELETE ") (log-entry entry)))
+            (u/info (format-entry entry :red "DELETE"))
             (harvest/delete-entry! client id))
 
           (doseq [entry to-push]
-            (u/info (str (u/colorize :green "\tPUSH   ") (log-entry entry)))
+            (u/info (format-entry entry :green "PUSH"))
             (harvest/create-entry! client entry))))))
