@@ -6,14 +6,14 @@
             [hs.org :as org]
             [hs.sync :as sync]
             [hs.timesheet :as timesheet]
-            [hs.utils :refer [error]]))
+            [hs.utils :refer [error info stacktrace-str]]))
 
 (def cli-options
   [["-p" "--default-project PROJECT"
     "Default project. Same as org tags, use % as a wildcard"]
    ["-w" "--week WEEK"
     "The week. One of 'all', 'last' or a weekstring like '20 May'"
-    :default :all
+    :default :all :default-desc "all"
     :parse-fn #(case % ("all" "last") (keyword %) %)]
    ["-t" "--harvest-access-token TOKEN"
     "The Harvest access token, defaults to HARVEST_ACCESS_TOKEN env"]
@@ -21,33 +21,44 @@
     "The Harvest access token, defaults to HARVEST_ACCOUNT_ID env"]
    ["-h" "--help" "Show this message"]])
 
+(defn- usage-summary [summary]
+  (str "Usage: harvest sync FILENAME <options>\n\n" summary))
+
+(defn- parse-args [args]
+  (let [{:keys [options summary arguments errors]} (cli/parse-opts args cli-options)
+        exit-with-summary (fn [& [err]]
+                            {:exit-msg (str err (when err "\n\n") (usage-summary summary))
+                             :ok? (not err)})]
+    (cond
+      (:help options)    (exit-with-summary)
+      (empty? arguments) (exit-with-summary)
+      (seq errors)       (exit-with-summary (str/join " " errors))
+      (= "sync" (first arguments))
+      (if (= 2 (count arguments))
+        {:action :sync :opts (assoc options :filename (second arguments))}
+        (exit-with-summary "No filename provided"))
+      :else (exit-with-summary (str "No such action: " (first arguments))))))
+
+(defn- exit [msg ok?]
+  (let [[log exit-code] (if ok? [info 0] [error -1])]
+    (log msg)
+    (System/exit exit-code)))
+
 (defn- sync!
   "Reads the org file, extracts the time entries and pushes them to
   harvest"
-  [org-filename options]
+  [{:keys [filename] :as options}]
   (sync/sync!
    (harvest/make-client options)
-   (timesheet/parse (org/->json org-filename) options)))
-
-(defn- print-usage [summary]
-  (println "Usage: harvest sync FILENAME <options>\n\n" (subs summary 1)))
+   (timesheet/parse (org/->json filename) options)))
 
 (defn -main [& args]
-  (let [{:keys [options summary arguments errors]}
-        (cli/parse-opts args cli-options)]
-    (when (seq errors)
-      (error (str/join " " errors))
-      (print-usage summary)
-      (System/exit -1))
-    (if (:help options)
-      (print-usage summary)
+  (let [{:keys [exit-msg ok? action opts args]} (parse-args args)]
+    (if exit-msg
+      (exit exit-msg ok?)
       (try
-        (case (first arguments)
-          "sync" (sync! (second arguments) options)
-          (print-usage summary))
+        (sync! opts)
+        (System/exit 0)
         (catch Exception e
-          (if-let [msg (.getMessage e)]
-            (error (.getMessage e) (ex-data e))
-            (.printStackTrace e))
-          (System/exit -1))))
-    (System/exit 0)))
+          (let [msg (or (.getMessage e) (stacktrace-str e))]
+            (exit (str msg "\n" (ex-data e)) false)))))))

@@ -4,7 +4,8 @@
             [clj-time.format :as f]
             [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [clojure.stacktrace :refer [print-stack-trace]])
   (:import org.jline.terminal.TerminalBuilder
            org.joda.time.DateTime
            java.io.File))
@@ -100,3 +101,6 @@
       (.close term)
       (println)
       (= 121 result))))
+
+(defn stacktrace-str [e]
+  (with-out-str (print-stack-trace e)))

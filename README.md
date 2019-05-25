@@ -47,7 +47,7 @@ These are the supported options:
 Usage: harvest sync FILENAME <options>
 
   -p, --default-project PROJECT              Default project
-  -w, --week WEEK                      :all  The week. One of 'all', 'last' or a weekstring like '20 May'
+  -w, --week WEEK                       all  The week. One of 'all', 'last' or a weekstring like '20 May'
   -t, --harvest-access-token TOKEN           The Harvest access token, defaults to HARVEST_ACCESS_TOKEN env
   -a, --harvest-account-id ACCOUNT_ID        The Harvest access token, defaults to HARVEST_ACCOUNT_ID env
   -h, --help                                 Show this message
