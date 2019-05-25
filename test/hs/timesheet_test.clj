@@ -20,16 +20,13 @@
   (is (= [#:entry{:hours 1.0
                   :title "QA + Depoy"
                   :project-handles ["projectA"]
-                  :spent-at (t/date-time 2019 05 20)
-                  :_raw "20 May | Monday | 17:00 - 18:00 QA + Depoy"}
+                  :spent-at (t/date-time 2019 05 20)}
           #:entry{:hours 0.25
                   :title "Standup"
                   :project-handles ["brightmotive" "product"]
-                  :spent-at (t/date-time 2019 05 21)
-                  :_raw "20 May | Tuesday | 10:30 - 10:45 Standup"}
+                  :spent-at (t/date-time 2019 05 21)}
           #:entry{:hours 1.0
                   :title "Fix bug"
                   :project-handles ["customerA" "bugs"]
-                  :spent-at (t/date-time 2019 05 21)
-                  :_raw "20 May | Tuesday | 11:30 - 12:30 Fix bug"}]
+                  :spent-at (t/date-time 2019 05 21)}]
          (take 3 (drop 5 (sut/parse (org/->json "resources/example_timesheet.org")))))))

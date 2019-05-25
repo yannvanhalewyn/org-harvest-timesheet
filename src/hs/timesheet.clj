@@ -81,11 +81,7 @@
        {:entry/hours hours
         :entry/title title
         :entry/project-handles (or (:node/tags entry) DEFAULT_PROJECT_HANDLES)
-        :entry/spent-at time
-        :entry/_raw (format "%s | %s | %s"
-                            (:node/title week)
-                            (:node/title day)
-                            (:node/title entry))}))))
+        :entry/spent-at time}))))
 
 (defn parse
   "Given a json datastructure which comes from serializing the org
