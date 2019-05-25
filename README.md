@@ -45,10 +45,10 @@ And use it with these options
 ``` shell
 Usage: harvest sync FILENAME <options>
 
-  -p, --default-project PROJECT  Default project
-  -w, --week WEEK                The week. One of 'all', 'last' or a weekstring like '20 May'
-  -h, --help
-```
+  -p, --default-project PROJECT        Default project
+  -w, --week WEEK                :all  The week. One of 'all', 'last' or a weekstring like '20 May'
+  -h, --help                           Show this message
+  ```
 
 ## Methodology
 

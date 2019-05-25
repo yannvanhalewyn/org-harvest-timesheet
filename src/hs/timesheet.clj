@@ -69,6 +69,13 @@
      (str/trim text)]
     (throw (ex-info "Could not parse time entry" {:value s}))))
 
+(defn- filter-weeks [week week-nodes]
+  (case week
+    (:all nil) week-nodes
+    :last (take-last 1 week-nodes)
+    (filter #(= (str/lower-case week) (str/lower-case (:node/title %)))
+            week-nodes)))
+
 (defn- time-entries
   "Given a week node, parse the entries duration, title and timestamp"
   [default-project week]
@@ -88,8 +95,9 @@
   time tracker."
   [data {:keys [default-project week]}]
   (->> (parse-org-node data)
-       (assert-spec! :node/model)
        (:node/children)
+       (filter-weeks week)
+       (assert-spec+! :node/model)
        (mapcat (partial time-entries default-project))
        (assert-spec+! :entry/model)))
 

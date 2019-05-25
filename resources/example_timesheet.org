@@ -1,16 +1,11 @@
+* 13 May
+** Tuesday
+*** 09:30 - 10:00 Standup + discussion
 * 20 May
 ** Monday
 *** 10:00 - 10:15 Standup
 *** 10:15 - 10:45 Emails                                                   :projectA:
 *** 10:45 - 12:30 Programming                                              :projectA:
-*** 13:00 - 15:00 Sprint planning                                          :projectB:
-*** 15:00 - 17:00 Reviews                                                  :projectA:
-*** 17:00 - 18:00 QA + Depoy                                               :projectA:
 ** Tuesday
 *** 10:30 - 10:45 Standup
 *** 11:30 - 12:30 Fix bug                                                  :customerA:bugs:
-*** 13:00 - 18:00 Pairing programming on feature X                         :projectB:
-** Wednesday
-*** 09:30 - 10:00 Standup + discussion
-*** 10:00 - 13:00 Discussion about tech Debt                               :projectB:
-*** 14:00 - 17:00 Emails and bugfixes                                      :projectB:

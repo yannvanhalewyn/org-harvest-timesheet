@@ -16,19 +16,40 @@
     "20 May" "Tuesday" 5 21
     "1 jul" "thursday" 7 4))
 
+(def ALL
+  [#:entry{:hours 0.5
+           :title "Standup + discussion"
+           :project-handles ["default" "project"]
+           :spent-at (t/date-time 2019 05 14)}
+   #:entry{:hours 0.25
+           :title "Standup"
+           :project-handles ["default" "project"]
+           :spent-at (t/date-time 2019 05 20)}
+   #:entry{:hours 0.5
+           :title "Emails"
+           :project-handles ["projectA"]
+           :spent-at (t/date-time 2019 05 20)}
+   #:entry{:hours 1.75
+           :title "Programming"
+           :project-handles ["projectA"]
+           :spent-at (t/date-time 2019 05 20)}
+   #:entry{:hours 0.25
+           :title "Standup"
+           :project-handles ["default" "project"]
+           :spent-at (t/date-time 2019 05 21)}
+   #:entry{:hours 1.0
+           :title "Fix bug"
+           :project-handles ["customerA" "bugs"]
+           :spent-at (t/date-time 2019 05 21)}])
+
 (deftest parse
-  (let [data (org/->json "resources/example_timesheet.org")]
+  (let [data (org/->json "resources/example_timesheet.org")
+        opts {:default-project ["default" "project"]}]
     (testing "Can read org files and parse the entries"
-      (is (= [#:entry{:hours 1.0
-                      :title "QA + Depoy"
-                      :project-handles ["projectA"]
-                      :spent-at (t/date-time 2019 05 20)}
-              #:entry{:hours 0.25
-                      :title "Standup"
-                      :project-handles ["default" "project"]
-                      :spent-at (t/date-time 2019 05 21)}
-              #:entry{:hours 1.0
-                      :title "Fix bug"
-                      :project-handles ["customerA" "bugs"]
-                      :spent-at (t/date-time 2019 05 21)}]
-             (take 3 (drop 5 (sut/parse data {:default-options ["default" "project"]}))))))))
+      (is (= ALL (sut/parse data opts))))
+
+    (testing "It takes a week str"
+      (is (= (take 1 ALL) (sut/parse data (assoc opts :week "13 may")))))
+
+    (testing "It taks a :last week option"
+      (is (= (drop 1 ALL) (sut/parse data (assoc opts :week :last)))))))

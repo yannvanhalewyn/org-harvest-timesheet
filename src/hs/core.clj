@@ -15,6 +15,7 @@
     :parse-fn #(when % (str/split % #"-"))]
    ["-w" "--week WEEK"
     "The week. One of 'all', 'last' or a weekstring like '20 May'"
+    :default :all
     :parse-fn #(case % ("all" "last") (keyword %) %)]
    ["-h" "--help" "Show this message"]])
 
