@@ -2,7 +2,8 @@
   (:require [clj-time.core :as t]
             [clojure.spec.alpha :as s]
             [clojure.string :as str]
-            [hs.utils :refer [assert-spec! assert-spec+! keywordize parse-int]]))
+            [hs.utils :refer [assert-spec! assert-spec+! keywordize parse-int]])
+  (:import clojure.lang.PersistentVector))
 
 (def DEFAULT_PROJECT_HANDLES ["brightmotive" "product"])
 
@@ -32,7 +33,7 @@
 (def MONTHS ["jan" "feb" "mar" "apr" "may" "jun" "jul" "aug" "sept" "oct" "nov" "dec"])
 (def WEEKDAYS ["monday" "tuesday" "wednesday" "thursday" "friday" "saturday" "sunday"])
 
-(defn- index-of [coll x]
+(defn- index-of [^PersistentVector coll x]
   (let [i (.indexOf coll (str/lower-case x))]
     (when (= -1 i)
       (throw (ex-info "Couldn't find element in coll"

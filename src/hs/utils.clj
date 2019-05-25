@@ -6,7 +6,8 @@
             [clojure.spec.alpha :as s]
             [clojure.string :as str])
   (:import org.jline.terminal.TerminalBuilder
-           org.joda.time.DateTime))
+           org.joda.time.DateTime
+           java.io.File))
 
 (defn keywordize [s]
   (-> (str/lower-case s)
@@ -16,7 +17,7 @@
 
 (defn parse-int [s]
   (when-let [x (re-find #"^-?\d+$" (str s))]
-    (Integer. x)))
+    (Integer. ^String x)))
 
 (defn read-json [s]
   (json/parse-string s keywordize))
@@ -46,14 +47,14 @@
     (io/file home path)
     (throw (ex-info "No home directory found" {}))))
 
-(defn file-exists? [file]
+(defn file-exists? [^File file]
   (.exists file))
 
-(defn- last-modified [file]
+(defn- last-modified [^File file]
   (when (file-exists? file)
     (DateTime. (.lastModified file))))
 
-(defn with-file-cache* [{:keys [ttl file]} f]
+(defn with-file-cache* [{:keys [ttl ^File file]} f]
   (if (or (not (file-exists? file))
           (t/after? (t/now) (t/plus (last-modified file) ttl)))
     (let [data (f)]
