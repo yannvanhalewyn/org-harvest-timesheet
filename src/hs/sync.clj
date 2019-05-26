@@ -40,7 +40,8 @@
         candidates (filter (comp (partial re-find re) project-search-name) projects)
         pick (last (sort-by :project/updated-at candidates))]
     (when (empty? candidates)
-      (throw (ex-info "Could not find project for entry" entry)))
+      (throw (ex-info (str "Could not find project for entry. If this is a new project, "
+                           "consider clearing the cache in " (harvest/data-dir)) entry)))
     (when (> (count candidates) 1)
       (log (format "Multiple projects found for: '%s'. Picked: %s"
                    re (format-project-name pick))))

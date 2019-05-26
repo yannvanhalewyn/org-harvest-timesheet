@@ -14,6 +14,8 @@
 (defn- log [msg]
   (u/info (u/colorize :yellow "Harvest") msg))
 
+(def data-dir #(u/home-dir ".harvest_sync"))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsers
 
@@ -85,7 +87,7 @@
       (throw (ex-info "No harvest access token or account-id supplied" {})))
     {::access-token token
      ::account-id account-id
-     ::data-dir (u/home-dir ".harvest_sync")}))
+     ::data-dir (data-dir)}))
 
 (defn get-projects
   "Fetches the active projects from harvest. Caches the harvest
