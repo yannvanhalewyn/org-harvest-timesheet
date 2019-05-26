@@ -61,11 +61,15 @@
      :query-params query-params
      :as :json})))
 
+(def MAX_PAGES 10)
 (defn- paginate [merge-key client params]
-  (loop [results [(request client params)]]
-    (if-let [next (get-in (last results) [:links :next])]
+  (loop [results [(request client params)]
+         i 1]
+    (if-let [next (and (not (>= i MAX_PAGES))
+                       (get-in (last results) [:links :next]))]
       (recur (conj results (request client (update (assoc params :url next)
-                                                   :query-params dissoc :page))))
+                                                   :query-params dissoc :page)))
+             (inc i))
       (mapcat merge-key results))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
