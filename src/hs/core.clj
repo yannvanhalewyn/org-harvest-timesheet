@@ -47,7 +47,10 @@
 
 (defn- explain [^Throwable e]
   (str (or (.getMessage e) (stacktrace-str e)) "\n"
-       (when-let [d (ex-data e)] (with-out-str (pprint d)))))
+       (when-let [{:keys [type] :as d} (ex-data e)]
+         (if (= :spec/error type)
+           (:explain d)
+           (with-out-str (pprint d))))))
 
 (defn- sync!
   "Reads the org file, extracts the time entries and pushes them to

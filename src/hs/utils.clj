@@ -5,7 +5,8 @@
             [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
             [clojure.string :as str]
-            [clojure.stacktrace :refer [print-stack-trace]])
+            [clojure.stacktrace :refer [print-stack-trace]]
+            [expound.alpha :as expound])
   (:import org.jline.terminal.TerminalBuilder
            org.joda.time.DateTime
            java.io.File))
@@ -26,11 +27,15 @@
 (defn readable-date [d]
   (f/unparse (f/formatter "E MMM d, yyyy") d))
 
+(def expound-opts {:show-valid-values? true
+                   :print-specs? false
+                   :theme :figwheel-theme})
+
 (defn assert-spec! [spec x]
   (when-not (s/valid? spec x)
-    (throw (ex-info (str "Validation of " spec " failed")
-                    {:failure (str/trim (s/explain-str spec x))
-                     :spec spec :value x})))
+    (binding [s/*explain-out* (expound/custom-printer expound-opts)]
+      (throw (ex-info (str "Validation of " spec " failed")
+                      {:type :spec/error :explain (s/explain-str spec x)}))))
   x)
 
 (defn assert-spec+! [spec coll]
