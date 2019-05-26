@@ -11,12 +11,11 @@
   (u/colorize :cyan (format "[%s %s]" (:client/name entry)
                             (:project/name entry))))
 
-(defn- format-entry [entry & [prefix-color prefix]]
-  (format "    %s %s %s %s"
+(defn- format-entry [{:entry/keys [spent-at title hours] :as entry} & [prefix-color prefix]]
+  (format "    %s %s %s %s (%su)"
           (if prefix (u/colorize prefix-color prefix) "")
-          (u/colorize :grey (u/readable-date (:entry/spent-at entry)))
-          (format-project-name entry)
-          (:entry/title entry)))
+          (u/colorize :grey (u/readable-date spent-at))
+          (format-project-name entry) title hours))
 
 (defn- log-entries [entries & [prefix-color prefix]]
   (u/info "")
