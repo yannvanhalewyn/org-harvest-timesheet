@@ -9,11 +9,11 @@
 ;; Specs
 
 (s/def :node/type keyword?)
-(s/def :node/title (s/nilable string?))
+(s/def :node/value (s/nilable string?))
 (s/def :node/tags (s/nilable (s/coll-of string?)))
 (s/def :node/children (s/coll-of :node/model))
 (s/def :node/model
-  (s/keys :req [:node/type :node/title :node/tags :node/children]))
+  (s/keys :req [:node/type :node/value :node/tags :node/children]))
 
 (s/def :entry/hours pos?)
 (s/def :entry/title string?)
@@ -41,11 +41,14 @@
 (defn- parse-org-node
   "Given the raw json from and org file, recursively parse it into a
   clojure tree"
-  [[type props & children]]
-  {:node/type (keywordize type)
-   :node/title (:raw-value props)
-   :node/tags (:tags props)
-   :node/children (map parse-org-node children)})
+  [[type props & body]]
+  (let [[value children] (if (= "paragraph" type)
+                           [(first body) nil]
+                           [(:raw-value props) body])]
+    {:node/type (keywordize type)
+     :node/value value
+     :node/tags (:tags props)
+     :node/children (map parse-org-node children)}))
 
 (defn parse-weekday
   "Figures which date it should be in a given week using the
@@ -73,7 +76,7 @@
   (case week
     (:all nil) week-nodes
     :last (take-last 1 week-nodes)
-    (filter #(= (str/lower-case week) (str/lower-case (:node/title %)))
+    (filter #(= (str/lower-case week) (str/lower-case (:node/value %)))
             week-nodes)))
 
 (defn- time-entries
@@ -81,9 +84,9 @@
   [default-project week]
   (flatten
    (for [day (:node/children week)]
-     (for [entry (:node/children day)
-           :let [time (parse-weekday (:node/title week) (:node/title day))
-                 [hours title] (parse-entry-title (:node/title entry))]]
+     (for [entry (filter (comp #{:headline} :node/type) (:node/children day))
+           :let [time (parse-weekday (:node/value week) (:node/value day))
+                 [hours title] (parse-entry-title (:node/value entry))]]
        {:entry/hours hours
         :entry/title title
         :entry/spent-at time

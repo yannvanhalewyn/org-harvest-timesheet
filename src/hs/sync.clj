@@ -92,7 +92,7 @@
       (throw (ex-info "Locked entries detected in given time range."
                       {:type :sync/cancelled})))
 
-    (doseq [[c msg coll] [[:red "DELETED 🔥" to-delete] [:green "PUSHED 💾" to-push]]]
+    (doseq [[c msg coll] [[:red "DELETED 🔥" to-delete] [:green "PUSHED ☁️" to-push]]]
       (when (seq coll)
         (u/info "\nThese entries will be" (u/colorize c msg))
         (log-entries coll)))
