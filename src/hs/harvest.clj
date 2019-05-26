@@ -69,9 +69,7 @@
          i 1]
     (if-let [next (and (not (>= i MAX_PAGES))
                        (get-in (last results) [:links :next]))]
-      (recur (conj results (request client (update (assoc params :url next)
-                                                   :query-params dissoc :page)))
-             (inc i))
+      (recur (conj results (request client (assoc params :url next))) (inc i))
       (mapcat merge-key results))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

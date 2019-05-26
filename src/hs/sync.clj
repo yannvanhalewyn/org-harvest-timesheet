@@ -87,7 +87,8 @@
       (throw (ex-info "Could not find default task for project" entry)))
 
     (when-let [locked-entries (seq (filter :entry/locked? existing-entries))]
-      (log-entries locked-entries :red "LOCKED 🔒")
+      (u/info "\nThese remote entries are" (u/colorize :red "locked 🔒"))
+      (log-entries locked-entries)
       (throw (ex-info "Locked entries detected in given time range."
                       {:type :sync/cancelled})))
 
