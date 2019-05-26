@@ -87,18 +87,18 @@
       (throw (ex-info "Could not find default task for project" entry)))
 
     (when-let [locked-entries (seq (filter :entry/locked? existing-entries))]
-      (log-entries locked-entries :red "LOCKED")
+      (log-entries locked-entries :red "LOCKED 🔒")
       (throw (ex-info "Locked entries detected in given time range."
                       {:type :sync/cancelled})))
 
-    (doseq [[c msg coll] [[:red "DELETED" to-delete] [:green "PUSHED" to-push]]]
+    (doseq [[c msg coll] [[:red "DELETED 🔥" to-delete] [:green "PUSHED 💾" to-push]]]
       (when (seq coll)
         (u/info "\nThese entries will be" (u/colorize c msg))
         (log-entries coll)))
 
     (if (every? empty? [to-push to-delete])
       (log "Nothing to be done.")
-      (when (u/confirm! "\nApply?")
+      (when (u/confirm! "\n⚡ Apply?")
         (doseq [{:entry/keys [id] :as entry} to-delete]
           (u/info (format-entry entry :red "DELETE"))
           (harvest/delete-entry! client id))
