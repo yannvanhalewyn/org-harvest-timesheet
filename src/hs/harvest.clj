@@ -49,23 +49,24 @@
 
 (def ^:private BASE_URL "https://api.harvestapp.com/api/v2")
 
-(defn- request* [{::keys [access-token account-id]}
-                 {:keys [method path params query-params]}]
-  (http/request
-   {:url (str BASE_URL path)
-    :method (or method :get)
-    :headers {"Harvest-account-id" account-id
-              "Authorization" (str "Bearer " access-token)}
-    :form-params params
-    :query-params query-params
-    :as :json}))
+(defn- request [{::keys [access-token account-id]}
+                {:keys [url method path params query-params]}]
+  (:body
+   (http/request
+    {:url (or url (str BASE_URL path))
+     :method (or method :get)
+     :headers {"Harvest-account-id" account-id
+               "Authorization" (str "Bearer " access-token)}
+     :form-params params
+     :query-params query-params
+     :as :json})))
 
-(defn- request [client params]
-  (let [{:keys [body]} (request* client params)]
-    (if (and (:total_pages body) (> (:total_pages body) 1))
-      (throw (ex-info "Harvest responded with more than 1 page. Not implemented yet"
-                      {:path (:path params)}))
-      body)))
+(defn- paginate [merge-key client params]
+  (loop [results [(request client params)]]
+    (if-let [next (get-in (last results) [:links :next])]
+      (recur (conj results (request client (update (assoc params :url next)
+                                                   :query-params dissoc :page))))
+      (mapcat merge-key results))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public
@@ -87,23 +88,21 @@
   response for one day."
   [{::keys [data-dir] :as client}]
   (parse-projects
-   (:projects
-    (with-file-cache {:ttl (weeks 1)
-                      :file (io/file data-dir "cache/projects.edn")}
-      (log "Fetching projects")
-      (request client {:path "/projects.json"
-                       :query-params {:is_active true}})))))
+   (with-file-cache {:ttl (weeks 1)
+                     :file (io/file data-dir "cache/projects.edn")}
+     (log "Fetching projects")
+     (paginate :projects client
+               {:path "/projects.json" :query-params {:is_active true}}))))
 
 (defn get-project-tasks
   [{::keys [data-dir] :as client} project-id]
   (parse-tasks
-   (:task_assignments
-    (let [cache-key (format "cache/project_%s_tasks.edn" project-id)
-          path (str "/projects/" project-id "/task_assignments")]
-      (with-file-cache {:ttl (weeks 1) :file (io/file data-dir cache-key)}
-        (log (str "Fetching tasks for project " project-id))
-        (request client {:path path
-                         :query-params {:is_active true}}))))))
+   (let [cache-key (format "cache/project_%s_tasks.edn" project-id)
+         path (str "/projects/" project-id "/task_assignments")]
+     (with-file-cache {:ttl (weeks 1) :file (io/file data-dir cache-key)}
+       (log (str "Fetching tasks for project " project-id))
+       (paginate :task_assignments client
+                 {:path path :query-params {:is_active true}})))))
 
 (defn get-entries [client {:keys [from to]}]
   (assert (or (t/equal? from to) (t/before? from to)))
@@ -111,11 +110,12 @@
                (u/readable-date from) (u/readable-date to)))
   (let [user (request client {:path "/users/me"})]
     (assert (:id user))
-    (-> (request client {:path "/time_entries"
-                         :query-params {:from (timestamp from)
-                                        :user_id (:id user)
-                                        :to (timestamp to)}})
-        :time_entries parse-entries)))
+    (parse-entries
+     (paginate :time_entries client
+               {:path "/time_entries"
+                :query-params {:from (timestamp from)
+                               :user_id (:id user)
+                               :to (timestamp to)}}))))
 
 (defn delete-entry! [client entry-id]
   (request client {:path (str "/time_entries/" entry-id)
