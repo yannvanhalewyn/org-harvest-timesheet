@@ -35,7 +35,7 @@
   name and task name. Will throw when none found, pick the most recent
   one if multiple are found."
   [projects entry]
-  (let [re (re-pattern (str/join ".*" (:entry/project-handles entry)))
+  (let [re (re-pattern (str "(?i)" (str/join ".*" (:entry/project-handles entry))))
         candidates (filter (comp (partial re-find re) project-search-name) projects)
         pick (last (sort-by :project/updated-at candidates))]
     (when (empty? candidates)

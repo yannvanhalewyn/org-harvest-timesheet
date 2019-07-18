@@ -1,6 +1,6 @@
 UBERJAR    := target/harvest_sync-0.0.1-standalone.jar
 SRC_FILES  := $(shell find src resources -type f)
-TARGET_JAR := ~/.scripts/harvest_sync.jar
+TARGET_JAR := ~/bin/harvest_sync.jar
 
 default: install
 
