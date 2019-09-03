@@ -28,7 +28,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsing org timesheet
 
-(def MONTHS ["jan" "feb" "mar" "apr" "may" "jun" "jul" "aug" "sept" "oct" "nov" "dec"])
+(def MONTHS ["jan" "feb" "mar" "apr" "may" "jun" "jul" "aug" "sep" "oct" "nov" "dec"])
 (def WEEKDAYS ["monday" "tuesday" "wednesday" "thursday" "friday" "saturday" "sunday"])
 
 (defn- index-of [^PersistentVector coll x]
