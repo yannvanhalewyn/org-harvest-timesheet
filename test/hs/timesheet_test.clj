@@ -15,7 +15,13 @@
   (are [a b m d] (= (t/date-time (t/year (t/now)) m d) (sut/parse-weekday a b))
     "20 May" "Monday" 5 20
     "20 May" "Tuesday" 5 21
-    "1 jul" "thursday" 7 4))
+    "1 jul" "thursday" 7 4
+    "30 sep" "friday" 10 4)
+  (testing "It won't allow any other weekdays"
+    (is (thrown? Exception (sut/parse-weekday "30 sep" "x"))))
+  (testing "It won't allow a week-string that isn't a monday"
+    (is (thrown? java.lang.AssertionError
+                 (sut/parse-weekday "29 sep" "friday")))))
 
 (def ALL
   [#:entry{:hours 0.5

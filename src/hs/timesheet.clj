@@ -58,8 +58,11 @@
   (let [[d m] (str/split week-str #" ")
         year (t/year (t/now))
         month (inc (index-of MONTHS m))
-        day (+ (parse-int d) (index-of WEEKDAYS weekday-str))]
-    (t/date-time year month day)))
+        day (parse-int d)
+        monday (t/date-time year month day)]
+    (assert (= 1 (t/day-of-week monday))
+            (str week-str " is not a monday!"))
+    (t/plus monday (t/days (index-of WEEKDAYS weekday-str)))))
 
 (defn parse-entry-title
   "Parses the raw text of an entry value like:
