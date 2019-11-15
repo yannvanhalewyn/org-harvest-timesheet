@@ -14,8 +14,6 @@
 (defn- log [msg]
   (u/info (u/colorize :yellow "Harvest") msg))
 
-(def data-dir #(u/home-dir ".harvest_sync"))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsers
 
@@ -85,20 +83,20 @@
       (throw (ex-info "No harvest access token or account-id supplied" {})))
     {::access-token token
      ::account-id account-id
-     ::data-dir (data-dir)}))
+     ::data-dir (u/home-dir ".harvest_sync")}))
 
 (defn get-projects
   "Fetches the active projects from harvest. Caches the harvest
   response for one day."
   [{::keys [data-dir] :as client}]
   (parse-projects
-   (with-file-cache {:ttl (weeks 1)
-                     :file (io/file data-dir "cache/projects.edn")}
+   (with-file-cache {:ttl (weeks 1) :file (io/file data-dir "cache/projects.edn")}
      (log "Fetching projects")
      (paginate :projects client
                {:path "/projects.json" :query-params {:is_active true}}))))
 
 (defn get-project-tasks
+  "Gets the tasks for a given project-id from harvest"
   [{::keys [data-dir] :as client} project-id]
   (parse-tasks
    (let [cache-key (format "cache/project_%s_tasks.edn" project-id)
@@ -108,7 +106,9 @@
        (paginate :task_assignments client
                  {:path path :query-params {:is_active true}})))))
 
-(defn get-entries [client {:keys [from to]}]
+(defn get-entries
+  "Fetches the entries between from and to from harvest"
+  [client {:keys [from to]}]
   (assert (or (t/equal? from to) (t/before? from to)))
   (log (format "Fetching existing entries between %s and %s"
                (u/readable-date from) (u/readable-date to)))
@@ -121,13 +121,14 @@
                                :user_id (:id user)
                                :to (timestamp to)}}))))
 
-(defn delete-entry! [client entry-id]
+(defn delete-entry!
+  "Deletes the time entry from Harvest"
+  [client entry-id]
   (request client {:path (str "/time_entries/" entry-id)
                    :method :delete}))
 
 (defn create-entry!
-  "Posts the time entry to Harvest. Will try to find a task for the
-  given project. Throws if no task is found"
+  "Posts the time entry to Harvest."
   [client entry]
   (request
    client
